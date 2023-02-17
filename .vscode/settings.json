@@ -1,0 +1,10 @@
+{
+	"editor.insertSpaces": false,
+	"editor.detectIndentation": false,
+	"editor.tabSize": 4,
+	"[lua]": {
+		"editor.defaultFormatter": "JohnnyMorganz.stylua",
+		"editor.formatOnPaste": true,
+		"editor.formatOnSave": true,
+	}
+}

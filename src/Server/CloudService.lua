@@ -12,7 +12,7 @@ local CloudService = {}
 local ENVIRONMENT_VARIABLES = {
 	API_KEY = "",
 	API_ID = "",
-    API_SERVER = "https://tst.api.styngr.com/api/sdk/"
+	API_SERVER = "https://tst.api.styngr.com/api/sdk/",
 }
 
 --[[
@@ -26,28 +26,28 @@ end
     Wraps around every call to external API, ensures token is refreshed and handles errors in a graceful-ish matter
 ]]
 function CloudService:Call(endpoint, method)
-    assert(endpoint and typeof(endpoint) == "string" and method and typeof(method) == "string")
+	assert(endpoint and typeof(endpoint) == "string" and method and typeof(method) == "string")
 
 	return getToken():andThen(function(token)
-        return Promise.new(function(resolve, reject)
-            local request = {
-                Url = ENVIRONMENT_VARIABLES.API_SERVER .. endpoint,
-                Method = method,
-                Headers = {
-                    Authorization = "Bearer " .. token,
-                    Accept = "application/json"
-                },
-            }
+		return Promise.new(function(resolve, reject)
+			local request = {
+				Url = ENVIRONMENT_VARIABLES.API_SERVER .. endpoint,
+				Method = method,
+				Headers = {
+					Authorization = "Bearer " .. token,
+					Accept = "application/json",
+				},
+			}
 
-            local ok, result = pcall(HttpService.RequestAsync, HttpService, request)
+			local ok, result = pcall(HttpService.RequestAsync, HttpService, request)
 
-            if ok then
-                resolve(result)
-            else
-                reject(result)
-            end
-        end)
-    end)
+			if ok then
+				resolve(result)
+			else
+				reject(result)
+			end
+		end)
+	end)
 end
 
 --[[
