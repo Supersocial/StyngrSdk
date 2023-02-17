@@ -1,0 +1,38 @@
+{
+	"name": "StyngrSdk",
+	"tree": {
+		"$className": "DataModel",
+		"ReplicatedStorage": {
+			"$className": "ReplicatedStorage",
+			"Styngr": {
+				"$className": "Folder",
+				"$path": "src/Shared",
+				"Packages": {
+						"$className": "Folder",
+						"$path": "Packages"
+				},				
+				"DevPackages": {
+					"$className": "Folder",
+					"$path": "DevPackages"
+				}
+			}
+		},
+		"ServerScriptService": {
+			"$className": "ServerScriptService",
+			"Styngr": {
+				"$className": "Folder",
+				"$path": "src/Server"
+			}
+		},
+		"StarterPlayer": {
+			"$className": "StarterPlayer",
+			"StarterPlayerScripts": {
+				"$className": "StarterPlayerScripts",
+				"Styngr": {
+					"$className": "Folder",
+					"$path": "src/Client"
+				}
+			}
+		}
+	}
+}
