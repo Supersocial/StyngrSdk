@@ -133,18 +133,4 @@ function CloudService:Call(token, endpoint, method, body)
 	end)
 end
 
---[[
-    Initialization method
-]]
-function CloudService:Init()
-	assert(HttpService.HttpEnabled, "Http requests needs to be enabled for Styngr to work!")
-end
-
---[[
-    Startup method
-]]
-function CloudService:Start()
-	-- TODO: Do initial authentication, setup refresh token or cancel out if authentication fails
-end
-
 return CloudService
