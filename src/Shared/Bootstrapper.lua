@@ -1,3 +1,5 @@
+-- TODO: Auto-loading is probably not the way we wanna go with this, but for the time being this does the trick.
+
 --[[
     Small bootstrapper script
 ]]
