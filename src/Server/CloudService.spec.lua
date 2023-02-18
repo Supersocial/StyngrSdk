@@ -9,33 +9,48 @@ return function()
 
 	describe("token creation request", function()
 		it("should return a new token for user 1", function()
-			local worked, token = cloudService:CreateSDKToken(1):await()
+			local worked, token = cloudService:CreateToken(1):await()
 
 			expect(worked).to.equal(true)
-			expect(token).to.be.a("table")
-			expect(token.token).to.be.a("string")
+			expect(token).to.be.a("string")
 		end)
 	end)
 
-	describe("getting a token and requesting playlist endpoint", function()
-		it("should get or create a token for user 2", function()
-			local worked, response = cloudService:GetToken(2):await()
+	describe("getting a token and requesting playlist endpoint and then remove the token from cache", function()
+		it("should fail cause no token is present for user 2", function()
+			local worked = cloudService:ReadToken(2):await()
+			expect(worked).to.equal(false)
+		end)
 
-			expect(worked).to.equal(true)
-			expect(response).to.be.a("string")
+		it("should create and get token for user 2", function()
+			local createTokenWorked, createTokenResult = cloudService:CreateToken(2):await()
+
+			expect(createTokenWorked).to.equal(true)
+			expect(createTokenResult).to.be.a("string")
+
+			local getTokenWorked, getTokenResult = cloudService:ReadToken(2):await()
+
+			expect(getTokenWorked).to.equal(true)
+			expect(getTokenResult).to.be.a("string")
 		end)
 
 		it("should get token, and return playlist data", function()
-			local getTokenWorked, getTokenResponse = cloudService:GetToken(2):await()
+			local getTokenWorked, getTokenResponse = cloudService:ReadToken(2):await()
 
 			expect(getTokenWorked).to.equal(true)
 			expect(getTokenResponse).to.be.a("string")
 
-			local callWorked, callResponse = cloudService:Call(getTokenResponse, "integration/playlists", "GET"):await()
-
-			print(callResponse)
+			local callWorked = cloudService:Call(getTokenResponse, "integration/playlists", "GET"):await()
 
 			expect(callWorked).to.equal(true)
+		end)
+
+		it("should remove token from cache", function()
+			cloudService:DeleteToken(2)
+
+			local getTokenWorked = cloudService:ReadToken(2):await()
+
+			expect(getTokenWorked).to.equal(false)
 		end)
 	end)
 end

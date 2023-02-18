@@ -12,6 +12,8 @@ local CloudService = {}
 CloudService.__index = CloudService
 
 function CloudService.new(apiKey: string, appId: string, apiServer: string)
+	assert(apiKey and appId and apiServer, "Please ensure all CloudService constructor params are filled out!")
+
 	local self = {
 		_tokens = {},
 		_apiKey = apiKey,
@@ -25,10 +27,27 @@ function CloudService.new(apiKey: string, appId: string, apiServer: string)
 end
 
 --[[
+	Deletes the cached token, only intended to be used when the player joins to free up memory...
+]]
+function CloudService:DeleteToken(userId: number)
+	assert(
+		self._tokens,
+		"Please make sure that you have set up a new CloudService instance before calling this method!"
+	)
+
+	assert(typeof(userId) == "number", "Please pass in a valid userId!")
+
+	if self._tokens[userId] then
+		self._tokens[userId] = nil
+	end
+end
+
+--[[
+    (INTERNAL METHOD)
 	Makes a POST call to the external API generating a new token for the specified user
 	@returns an object with the new token inside
 ]]
-function CloudService:CreateSDKToken(userId: number)
+function CloudService:CreateToken(userId: number)
 	assert(
 		self._tokens,
 		"Please make sure that you have set up a new CloudService instance before calling this method!"
@@ -59,7 +78,14 @@ function CloudService:CreateSDKToken(userId: number)
 
 		if ok then
 			if result.Success then
-				resolve(HttpService:JSONDecode(result.Body))
+				local resultBody = HttpService:JSONDecode(result.Body)
+
+				if resultBody["token"] then
+					self._tokens[userId] = resultBody["token"]
+					resolve(resultBody["token"])
+				else
+					reject(result)
+				end
 			else
 				reject(result)
 			end
@@ -70,9 +96,9 @@ function CloudService:CreateSDKToken(userId: number)
 end
 
 --[[
-    Handles requesting a new token if there's none or if the current one is expired
+    (INTERNAL METHOD)
 ]]
-function CloudService:GetToken(userId: number)
+function CloudService:ReadToken(userId: number)
 	assert(
 		self._tokens,
 		"Please make sure that you have set up a new CloudService instance before calling this method!"
@@ -87,21 +113,33 @@ function CloudService:GetToken(userId: number)
 		if existingToken then
 			resolve(existingToken)
 		else
-			self:CreateSDKToken(userId)
-				:andThen(function(tokenResponse)
-					self._tokens[userId] = tokenResponse.token
-
-					resolve(tokenResponse.token)
-				end)
-				:catch(reject)
+			reject()
 		end
+	end)
+end
+
+--[[
+	Gets or creates a new token for the specified userId
+]]
+function CloudService:GetToken(userId: number)
+	assert(
+		self._tokens,
+		"Please make sure that you have set up a new CloudService instance before calling this method!"
+	)
+
+	assert(typeof(userId) == "number", "Please pass in a valid userId!")
+
+	return Promise.new(function(resolve, reject)
+		self:ReadToken(userId):andThen(resolve, function()
+			self:CreateToken(userId):andThen(resolve, reject)
+		end)
 	end)
 end
 
 --[[
     Wraps around every call to external API, ensures token is refreshed and handles errors in a graceful-ish matter
 ]]
-function CloudService:Call(token, endpoint, method, body)
+function CloudService:Call(token: string, endpoint: string, method: "GET" | "POST" | "PATCH", body: table?)
 	assert(token and endpoint and method)
 
 	return Promise.new(function(resolve, reject)
