@@ -11,6 +11,7 @@ local StyngrService = {}
 
 StyngrService.__index = StyngrService
 
+-- TODO: Include data service here... If we want to handle state!
 function StyngrService.new(cloudService)
 	assert(cloudService, "Please pass in a CloudService!")
 
@@ -24,7 +25,7 @@ function StyngrService.new(cloudService)
 end
 
 function StyngrService:GetPlaylists(userId: number)
-	assert(self._cloudService, "No cloudService present...")
+	assert(self._cloudService, "No cloudService present...") -- TODO: This might be redundant, doesn't hurt to check though!
 
 	return self._cloudService
 		:GetToken(userId)
@@ -42,6 +43,17 @@ function StyngrService:GetPlaylists(userId: number)
 				end
 			end)
 		end)
+end
+
+function StyngrService:StartPlaylistSession(userId: number, playlistId: string)
+	assert(self._cloudService, "No cloudService present...")
+
+	--[[
+		TODO: Determine logical flow here, along with how we want to handle state.
+		-> some of the current endpoints indicate that the backend is tracking some leevel of state,
+		-> wondering if we want to offload state entirely to them or if we should handle state on our end as well,
+		-> the latter option seems higher complexity and could cause edge cases where state on our end doesn't align with the backend,
+	]]
 end
 
 return StyngrService
