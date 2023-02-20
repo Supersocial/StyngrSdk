@@ -1,5 +1,6 @@
+local ServerScriptService = game:GetService("ServerScriptService")
 return function()
-	local CloudService = require(script.Parent.CloudService)
+	local CloudService = require(ServerScriptService.Styngr.Modules.CloudService)
 
 	-- TODO: This test can be polluted now,
 
@@ -11,7 +12,7 @@ return function()
 
 	describe("token creation request", function()
 		it("should return a new token for user 1", function()
-			local worked, token = cloudService:CreateToken(1):await()
+			local worked, token = cloudService:_createToken(1):await()
 
 			expect(worked).to.equal(true)
 			expect(token).to.be.a("string")
@@ -20,24 +21,24 @@ return function()
 
 	describe("getting a token and requesting playlist endpoint and then remove the token from cache", function()
 		it("should fail cause no token is present for user 2", function()
-			local worked = cloudService:ReadToken(2):await()
+			local worked = cloudService:_readToken(2):await()
 			expect(worked).to.equal(false)
 		end)
 
-		it("should create and get token for user 2", function()
-			local createTokenWorked, createTokenResult = cloudService:CreateToken(2):await()
+		it("should create and read token for user 2", function()
+			local createTokenWorked, createTokenResult = cloudService:_createToken(2):await()
 
 			expect(createTokenWorked).to.equal(true)
 			expect(createTokenResult).to.be.a("string")
 
-			local getTokenWorked, getTokenResult = cloudService:ReadToken(2):await()
+			local getTokenWorked, getTokenResult = cloudService:_readToken(2):await()
 
 			expect(getTokenWorked).to.equal(true)
 			expect(getTokenResult).to.be.a("string")
 		end)
 
-		it("should get token, and return playlist data", function()
-			local getTokenWorked, getTokenResponse = cloudService:ReadToken(2):await()
+		it("should read token, and return playlist data", function()
+			local getTokenWorked, getTokenResponse = cloudService:_readToken(2):await()
 
 			expect(getTokenWorked).to.equal(true)
 			expect(getTokenResponse).to.be.a("string")
@@ -48,9 +49,9 @@ return function()
 		end)
 
 		it("should remove token from cache", function()
-			cloudService:DeleteToken(2)
+			cloudService:_deleteToken(2)
 
-			local getTokenWorked = cloudService:ReadToken(2):await()
+			local getTokenWorked = cloudService:_readToken(2):await()
 
 			expect(getTokenWorked).to.equal(false)
 		end)

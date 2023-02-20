@@ -11,26 +11,26 @@ local CloudService = {}
 
 CloudService.__index = CloudService
 
-type CloudServiceConstructor = {
-	apiKey: string,
-	appId: string,
-	apiServer: string,
-}
-
 --[[
 	Creates a new CloudService instance
 ]]
-function CloudService.new(input: CloudServiceConstructor)
+function CloudService.new(inputConfiguration)
 	assert(
-		input and input.apiKey and input.appId and input.apiServer,
+		inputConfiguration
+			and inputConfiguration.apiKey
+			and typeof(inputConfiguration.apiKey) == "string"
+			and inputConfiguration.appId
+			and typeof(inputConfiguration.appId) == "string"
+			and inputConfiguration.apiServer
+			and typeof(inputConfiguration.apiServer) == "string",
 		"Please ensure all CloudService constructor params are filled out!"
 	)
 
 	local self = {
 		_tokens = {},
-		_apiKey = input.apiKey,
-		_appId = input.appId,
-		_apiServer = input.apiServer,
+		_apiKey = inputConfiguration.apiKey,
+		_appId = inputConfiguration.appId,
+		_apiServer = inputConfiguration.apiServer,
 	}
 
 	setmetatable(self, CloudService)
@@ -39,9 +39,9 @@ function CloudService.new(input: CloudServiceConstructor)
 end
 
 --[[
-	Deletes the cached token, only intended to be used when the player joins to free up memory...
+	Deletes token from cache
 ]]
-function CloudService:DeleteToken(userId: number)
+function CloudService:_deleteToken(userId: number)
 	assert(
 		self._tokens,
 		"Please make sure that you have set up a new CloudService instance before calling this method!"
@@ -55,11 +55,9 @@ function CloudService:DeleteToken(userId: number)
 end
 
 --[[
-    (INTERNAL METHOD)
-	Makes a POST call to the external API generating a new token for the specified user
-	@returns an object with the new token inside
+	Makes a HttpService call to the external API that returns a token for the specified userId
 ]]
-function CloudService:CreateToken(userId: number)
+function CloudService:_createToken(userId: number)
 	assert(
 		self._tokens,
 		"Please make sure that you have set up a new CloudService instance before calling this method!"
@@ -108,9 +106,9 @@ function CloudService:CreateToken(userId: number)
 end
 
 --[[
-    (INTERNAL METHOD)
+	Reads token for the specified userId from cache
 ]]
-function CloudService:ReadToken(userId: number)
+function CloudService:_readToken(userId: number)
 	assert(
 		self._tokens,
 		"Please make sure that you have set up a new CloudService instance before calling this method!"
@@ -142,16 +140,16 @@ function CloudService:GetToken(userId: number)
 	assert(typeof(userId) == "number", "Please pass in a valid userId!")
 
 	return Promise.new(function(resolve, reject)
-		self:ReadToken(userId):andThen(resolve, function()
-			self:CreateToken(userId):andThen(resolve, reject)
+		self:_readToken(userId):andThen(resolve, function()
+			self:_createToken(userId):andThen(resolve, reject)
 		end)
 	end)
 end
 
 --[[
-    Wraps around every call to external API, ensures token is refreshed and handles errors in a graceful-ish matter
+    Wraps around every call to external API
 ]]
-function CloudService:Call(token: string, endpoint: string, method: "GET" | "POST" | "PATCH", body: table?)
+function CloudService:Call(token, endpoint, method, body)
 	assert(token and endpoint and method)
 
 	return Promise.new(function(resolve, reject)

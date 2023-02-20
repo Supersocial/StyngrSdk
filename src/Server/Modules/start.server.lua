@@ -1,4 +1,10 @@
-local StyngrService = require(script.Parent.StyngrService)
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Modules = script.Parent
+
+require(ReplicatedStorage.Styngr.Bootstrapper)(Modules)
+
+local StyngrService = require(Modules.StyngrService)
 
 StyngrService.SetConfiguration({
 	apiKey = "STYNAPP-kSzCNaZFzonvAs3rALos4Dzw2TxV0K",

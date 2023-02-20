@@ -13,21 +13,29 @@ local StyngrService = {}
 
 local cloudService
 
-type StyngrServiceConfiguration = {
-	apiKey: string,
-	appId: string,
-	apiServer: string?,
-}
+function StyngrService.SetConfiguration(inputConfiguration)
+	assert(
+		inputConfiguration
+			and inputConfiguration.apiKey
+			and typeof(inputConfiguration.apiKey) == "string"
+			and inputConfiguration.appId
+			and typeof(inputConfiguration.appId) == "string",
+		"Please specify a configuration and ensure all values are correct!"
+	)
 
-function StyngrService.SetConfiguration(inputConfiguration: StyngrServiceConfiguration)
-	inputConfiguration.apiServer = if inputConfiguration.apiServer
-		then inputConfiguration.apiServer
-		else "https://tst.api.styngr.com/api/sdk/"
+	if inputConfiguration.apiServer then
+		assert(
+			typeof(inputConfiguration.apiServer) == "string",
+			"Please specify a configuration and ensure all values are correct!"
+		)
+	else
+		inputConfiguration.apiServer = "https://tst.api.styngr.com/api/sdk/"
+	end
 
 	cloudService = CloudService.new(inputConfiguration)
 
 	Players.PlayerRemoving:Connect(function(player)
-		cloudService:DeleteToken(player.UserId)
+		cloudService:_deleteToken(player.UserId)
 	end)
 end
 
@@ -68,5 +76,15 @@ function StyngrService:StartPlaylistSession(userId: number, playlistId: string)
 		-> the latter option seems higher complexity and could cause edge cases where state on our end doesn't align with the backend,
 	]]
 end
+
+--[[
+	Initialization method
+]]
+function StyngrService:Init() end
+
+--[[
+	Start method
+]]
+function StyngrService:Start() end
 
 return StyngrService
