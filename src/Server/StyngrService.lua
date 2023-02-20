@@ -1,7 +1,9 @@
 local HttpService = game:GetService("HttpService")
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Promise = require(ReplicatedStorage.Styngr.Packages.promise)
+local CloudService = require(script.Parent.CloudService)
 
 --[[
     StyngrService
@@ -9,28 +11,36 @@ local Promise = require(ReplicatedStorage.Styngr.Packages.promise)
 ]]
 local StyngrService = {}
 
-StyngrService.__index = StyngrService
+local cloudService
 
--- TODO: Include data service here... If we want to handle state!
-function StyngrService.new(cloudService)
-	assert(cloudService, "Please pass in a CloudService!")
+type StyngrServiceConfiguration = {
+	apiKey: string,
+	appId: string,
+	apiServer: string?,
+}
 
-	local self = {
-		_cloudService = cloudService,
-	}
+function StyngrService.SetConfiguration(inputConfiguration: StyngrServiceConfiguration)
+	inputConfiguration.apiServer = if inputConfiguration.apiServer
+		then inputConfiguration.apiServer
+		else "https://tst.api.styngr.com/api/sdk/"
 
-	setmetatable(self, StyngrService)
+	cloudService = CloudService.new(inputConfiguration)
 
-	return self
+	Players.PlayerRemoving:Connect(function(player)
+		cloudService:DeleteToken(player.UserId)
+	end)
 end
 
 function StyngrService:GetPlaylists(userId: number)
-	assert(self._cloudService, "No cloudService present...") -- TODO: This might be redundant, doesn't hurt to check though!
+	assert(
+		cloudService,
+		"Please initialize StyngrService using StyngrService.SetConfiguration() before calling this method!"
+	)
 
-	return self._cloudService
+	return cloudService
 		:GetToken(userId)
 		:andThen(function(token)
-			return self._cloudService:Call(token, "integration/playlists", "GET")
+			return cloudService:Call(token, "integration/playlists", "GET")
 		end)
 		:andThen(function(result)
 			return Promise.new(function(resolve, reject)
@@ -46,7 +56,10 @@ function StyngrService:GetPlaylists(userId: number)
 end
 
 function StyngrService:StartPlaylistSession(userId: number, playlistId: string)
-	assert(self._cloudService, "No cloudService present...")
+	assert(
+		cloudService,
+		"Please initialize StyngrService using StyngrService.SetConfiguration() before calling this method!"
+	)
 
 	--[[
 		TODO: Determine logical flow here, along with how we want to handle state.

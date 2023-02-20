@@ -11,14 +11,26 @@ local CloudService = {}
 
 CloudService.__index = CloudService
 
-function CloudService.new(apiKey: string, appId: string, apiServer: string)
-	assert(apiKey and appId and apiServer, "Please ensure all CloudService constructor params are filled out!")
+type CloudServiceConstructor = {
+	apiKey: string,
+	appId: string,
+	apiServer: string,
+}
+
+--[[
+	Creates a new CloudService instance
+]]
+function CloudService.new(input: CloudServiceConstructor)
+	assert(
+		input and input.apiKey and input.appId and input.apiServer,
+		"Please ensure all CloudService constructor params are filled out!"
+	)
 
 	local self = {
 		_tokens = {},
-		_apiKey = apiKey,
-		_appId = appId,
-		_apiServer = apiServer,
+		_apiKey = input.apiKey,
+		_appId = input.appId,
+		_apiServer = input.apiServer,
 	}
 
 	setmetatable(self, CloudService)

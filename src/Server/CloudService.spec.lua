@@ -1,11 +1,13 @@
 return function()
 	local CloudService = require(script.Parent.CloudService)
 
-	local cloudService = CloudService.new(
-		"STYNAPP-kSzCNaZFzonvAs3rALos4Dzw2TxV0K",
-		"591711ce-0869-469f-9646-35bff6af8cdc",
-		"https://tst.api.styngr.com/api/sdk/"
-	)
+	-- TODO: This test can be polluted now,
+
+	local cloudService = CloudService.new({
+		apiKey = "STYNAPP-kSzCNaZFzonvAs3rALos4Dzw2TxV0K",
+		appId = "591711ce-0869-469f-9646-35bff6af8cdc",
+		apiServer = "https://tst.api.styngr.com/api/sdk/",
+	})
 
 	describe("token creation request", function()
 		it("should return a new token for user 1", function()
