@@ -1,12 +1,14 @@
+--[=[
+	@class CloudService
+
+	Middleware for external API calls
+]=]
+
 local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Promise = require(ReplicatedStorage.Styngr.Packages.promise)
 
---[[
-    CloudService
-    Serves as a middleware between HTTPService and StyngrService, handles things like token storage, refreshing.
-]]
 local CloudService = {}
 
 CloudService.__index = CloudService
@@ -150,7 +152,15 @@ end
     Wraps around every call to external API
 ]]
 function CloudService:Call(token, endpoint, method, body)
-	assert(token and endpoint and method)
+	assert(
+		token
+			and typeof(token) == "string"
+			and endpoint
+			and typeof(endpoint) == "string"
+			and method
+			and typeof(method) == "string",
+		"Please ensure all parameters have been passed in and are of correct type!"
+	)
 
 	return Promise.new(function(resolve, reject)
 		local request = {

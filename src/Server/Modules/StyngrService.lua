@@ -1,19 +1,18 @@
+--[=[
+	@class StyngrService
+
+	Core service for all server side SDK methods
+]=]
+
 local HttpService = game:GetService("HttpService")
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Promise = require(ReplicatedStorage.Styngr.Packages.promise)
 local CloudService = require(script.Parent.CloudService)
 
---[[
-    StyngrService
-    Layer that lives on top of the CloudService module and exposes underlying methods in a more human readable format!
-]]
 local StyngrService = {}
 
-local cloudService
-
-function StyngrService.SetConfiguration(inputConfiguration)
+function StyngrService:SetConfiguration(inputConfiguration)
 	assert(
 		inputConfiguration
 			and inputConfiguration.apiKey
@@ -32,23 +31,20 @@ function StyngrService.SetConfiguration(inputConfiguration)
 		inputConfiguration.apiServer = "https://tst.api.styngr.com/api/sdk/"
 	end
 
-	cloudService = CloudService.new(inputConfiguration)
-
-	Players.PlayerRemoving:Connect(function(player)
-		cloudService:_deleteToken(player.UserId)
-	end)
+	self._cloudService = CloudService.new(inputConfiguration)
+	self._configuration = inputConfiguration
 end
 
 function StyngrService:GetPlaylists(userId: number)
 	assert(
-		cloudService,
+		self._cloudService,
 		"Please initialize StyngrService using StyngrService.SetConfiguration() before calling this method!"
 	)
 
-	return cloudService
+	return self._cloudService
 		:GetToken(userId)
 		:andThen(function(token)
-			return cloudService:Call(token, "integration/playlists", "GET")
+			return self._cloudService:Call(token, "integration/playlists", "GET")
 		end)
 		:andThen(function(result)
 			return Promise.new(function(resolve, reject)
@@ -65,7 +61,7 @@ end
 
 function StyngrService:StartPlaylistSession(userId: number, playlistId: string)
 	assert(
-		cloudService,
+		self._cloudService,
 		"Please initialize StyngrService using StyngrService.SetConfiguration() before calling this method!"
 	)
 
@@ -80,7 +76,10 @@ end
 --[[
 	Initialization method
 ]]
-function StyngrService:Init() end
+function StyngrService:Init()
+	self._cloudService = {}
+	self._configuration = {}
+end
 
 --[[
 	Start method
