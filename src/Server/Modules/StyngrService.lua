@@ -6,13 +6,20 @@
 
 local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerScriptService = game:GetService("ServerScriptService")
 
 local Promise = require(ReplicatedStorage.Styngr.Packages.promise)
-local CloudService = require(script.Parent.CloudService)
+local CloudService = require(ServerScriptService.Styngr.Modules.CloudService)
+local Types = require(ServerScriptService.Styngr.Types)
 
 local StyngrService = {}
 
-function StyngrService:SetConfiguration(inputConfiguration)
+--[=[
+	For setting up the SDK with your API credentials
+
+	@param inputConfiguration { apiKey: string, appId: string, apiServer: string? } -- Contains your API credentials
+]=]
+function StyngrService:SetConfiguration(inputConfiguration: Types.StyngrServiceConfiguration)
 	assert(
 		inputConfiguration
 			and inputConfiguration.apiKey
@@ -35,6 +42,11 @@ function StyngrService:SetConfiguration(inputConfiguration)
 	self._configuration = inputConfiguration
 end
 
+--[=[
+	Gets all accessible playlists for the specified userId
+	@param userId number -- The player you're requesting on behalf of
+	@return Promise<{{ description: string?, duration: number, id: string, title: string?, trackCount: number }}>
+]=]
 function StyngrService:GetPlaylists(userId: number)
 	assert(
 		self._cloudService,

@@ -6,17 +6,21 @@
 
 local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerScriptService = game:GetService("ServerScriptService")
 
 local Promise = require(ReplicatedStorage.Styngr.Packages.promise)
+local Types = require(ServerScriptService.Styngr.Types)
 
 local CloudService = {}
 
 CloudService.__index = CloudService
 
---[[
-	Creates a new CloudService instance
-]]
-function CloudService.new(inputConfiguration)
+--[=[
+	Creates a new CloudService instance with the specified configuration
+
+	@param inputConfiguration { apiKey: string, appId: string, apiServer: string? } -- Configuration
+]=]
+function CloudService.new(inputConfiguration: Types.CloudServiceConfiguration)
 	assert(
 		inputConfiguration
 			and inputConfiguration.apiKey
@@ -30,9 +34,7 @@ function CloudService.new(inputConfiguration)
 
 	local self = {
 		_tokens = {},
-		_apiKey = inputConfiguration.apiKey,
-		_appId = inputConfiguration.appId,
-		_apiServer = inputConfiguration.apiServer,
+		_configuration = inputConfiguration,
 	}
 
 	setmetatable(self, CloudService)
@@ -69,17 +71,17 @@ function CloudService:_createToken(userId: number)
 
 	return Promise.new(function(resolve, reject)
 		local body = {
-			appId = self._appId,
+			appId = self._configuration.appId,
 			deviceId = "",
 			expiresIn = "PT1H",
 			userId = tostring(userId),
 		}
 
 		local request = {
-			Url = self._apiServer .. "/tokens",
+			Url = self._configuration.apiServer .. "/tokens",
 			Method = "POST",
 			Headers = {
-				["x-api-token"] = self._apiKey,
+				["x-api-token"] = self._configuration.apiKey,
 				Accept = "application/json",
 				["Content-Type"] = "application/json",
 			},
@@ -130,9 +132,11 @@ function CloudService:_readToken(userId: number)
 	end)
 end
 
---[[
-	Gets or creates a new token for the specified userId
-]]
+--[=[
+	Gets or creates token for the specified userId
+
+	@param userId number -- User to get or create token for
+]=]
 function CloudService:GetToken(userId: number)
 	assert(
 		self._tokens,
@@ -148,9 +152,14 @@ function CloudService:GetToken(userId: number)
 	end)
 end
 
---[[
-    Wraps around every call to external API
-]]
+--[=[
+	Wraps around the default `HttpService:Request()` method to include headers and additional metadata for the API request
+
+	@param token string -- API token to authenticate request with
+	@param endpoint string -- The endpoint to call externally
+	@param method string -- The method to use (GET, POST, PATCH, DELETE, PUT)
+	@param body table? -- A table containing any data you want to follow along with your request
+]=]
 function CloudService:Call(token, endpoint, method, body)
 	assert(
 		token
@@ -164,7 +173,7 @@ function CloudService:Call(token, endpoint, method, body)
 
 	return Promise.new(function(resolve, reject)
 		local request = {
-			Url = self._apiServer .. endpoint,
+			Url = self._configuration.apiServer .. endpoint,
 			Method = method,
 			Headers = {
 				Authorization = "Bearer " .. token,
