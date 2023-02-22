@@ -1,12 +1,9 @@
 local ServerScriptService = game:GetService("ServerScriptService")
 return function()
 	local CloudService = require(ServerScriptService.Styngr.Modules.CloudService)
+	local Config = require(ServerScriptService.Styngr.Tests.Config)
 
-	local cloudService = CloudService.new({
-		apiKey = "STYNAPP-kSzCNaZFzonvAs3rALos4Dzw2TxV0K",
-		appId = "591711ce-0869-469f-9646-35bff6af8cdc",
-		apiServer = "https://tst.api.styngr.com/api/sdk/",
-	})
+	local cloudService = CloudService.new(Config.Credentials)
 
 	describe("token creation request", function()
 		it("should return a new token for user 1", function()

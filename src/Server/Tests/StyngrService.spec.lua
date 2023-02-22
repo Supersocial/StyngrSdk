@@ -1,16 +1,13 @@
 local ServerScriptService = game:GetService("ServerScriptService")
 return function()
 	local StyngrService = require(ServerScriptService.Styngr.Modules.StyngrService)
+	local Config = require(ServerScriptService.Styngr.Tests.Config)
 
 	StyngrService:Init()
 
 	StyngrService:Start()
 
-	StyngrService.SetConfiguration({
-		apiKey = "STYNAPP-kSzCNaZFzonvAs3rALos4Dzw2TxV0K",
-		appId = "591711ce-0869-469f-9646-35bff6af8cdc",
-		apiServer = "https://tst.api.styngr.com/api/sdk/",
-	})
+	StyngrService:SetConfiguration(Config.Credentials)
 
 	describe("requests", function()
 		it("gets playlists", function()

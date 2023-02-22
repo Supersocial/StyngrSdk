@@ -35,7 +35,7 @@ function StyngrService:SetConfiguration(inputConfiguration: Types.StyngrServiceC
 			"Please specify a configuration and ensure all values are correct!"
 		)
 	else
-		inputConfiguration.apiServer = "https://tst.api.styngr.com/api/sdk/"
+		inputConfiguration.apiServer = "https://stg.api.styngr.com/api/sdk/"
 	end
 
 	self._cloudService = CloudService.new(inputConfiguration)
