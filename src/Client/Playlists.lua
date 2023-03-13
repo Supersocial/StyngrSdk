@@ -31,6 +31,7 @@ local MaxTime = ProgressBarContainer.MaxTime :: TextLabel
 
 local Buttons = StyngrPlayer.Buttons :: Frame
 local PlayPauseButton = Buttons.PlayPause :: ImageButton
+local SkipForward = Buttons.SkipForward :: ImageButton
 
 local progressLineDefaultPosition = ProgressLine.Position
 local maxTimeDefaultText = MaxTime.Text
@@ -55,7 +56,26 @@ local function playSound(track)
 	local artists = table.concat(track.artistNames, ", ")
 
 	local sound = Instance.new("Sound", workspace)
-	local tween, playPauseButtonConnection
+	local tween, playPauseButtonConnection, skipForwardButtonConnection
+
+	local function cleanup()
+		sound:Destroy()
+
+		if tween then
+			tween:Cancel()
+			tween:Destroy()
+
+			ProgressLine.Position = progressLineDefaultPosition
+		end
+
+		if playPauseButtonConnection then
+			playPauseButtonConnection:Disconnect()
+		end
+
+		NowPlaying.Text = nowPlayingDefaultText
+		MaxTime.Text = maxTimeDefaultText
+		PlayPauseButton.Image = playIcon
+	end
 
 	sound.Looped = false
 	sound.SoundId = track.assetId
@@ -79,23 +99,7 @@ local function playSound(track)
 	end)
 
 	sound.Ended:Connect(function()
-		sound:Destroy()
-
-		if tween then
-			tween:Cancel()
-			tween:Destroy()
-
-			ProgressLine.Position = progressLineDefaultPosition
-		end
-
-		if playPauseButtonConnection then
-			playPauseButtonConnection:Disconnect()
-		end
-
-		NowPlaying.Text = nowPlayingDefaultText
-		MaxTime.Text = maxTimeDefaultText
-		PlayPauseButton.Image = playIcon
-
+		cleanup()
 		local data = ReplicatedStorage.Styngr.RequestNextTrack:InvokeServer()
 
 		playSound(data)

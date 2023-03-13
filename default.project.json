@@ -23,6 +23,9 @@
 				},
 				"RequestNextTrack": {
 					"$className": "RemoteFunction"
+				},
+				"SkipTrack": {
+					"$className": "RemoteFunction"
 				}
 			}
 		},

@@ -192,6 +192,50 @@ function StyngrService:RequestNextTrack(userId: number)
 		end)
 end
 
+function StyngrService:SkipTrack(userId: number)
+	assert(
+		self._cloudService,
+		"Please initialize StyngrService using StyngrService.SetConfiguration() before calling this method!"
+	)
+
+	local session = self:_getSession(userId)
+
+	assert(session, "No session found for user " .. userId .. "!")
+
+	return self._cloudService
+		:GetToken(userId)
+		:andThen(function(token)
+			return self._cloudService:Call(
+				token,
+				"integration/playlists/" .. session.playlistId .. "/skip?createAssetUrl=false",
+				"POST",
+				{
+					sessionId = session.sessionId,
+					format = "AAC",
+					statistics = {
+						{
+							trackId = session.track.trackId,
+							start = DateTime.now():ToIsoDate(),
+							duration = "PT3M",
+							autoplay = true,
+							isMuted = false,
+							clientTimestampOffset = "",
+						},
+					},
+				}
+			)
+		end)
+		:andThen(function(result)
+			return Promise.new(function(resolve)
+				local track = HttpService:JSONDecode(result.Body)
+
+				session.track = track
+
+				resolve(session)
+			end)
+		end)
+end
+
 local function buildClientFriendlyTrack(userId, track, robloxTrack)
 	local encryptionKey = game:GetService("NetworkServer"):EncryptStringForPlayerId(robloxTrack.key, userId)
 
@@ -236,7 +280,22 @@ function StyngrService:Init()
 	ReplicatedStorage.Styngr.RequestNextTrack.OnServerInvoke = function(player)
 		local ok, session = self:RequestNextTrack(player.UserId):await()
 
+		print(session)
+
 		assert(ok, "Failed to request next track!")
+
+		local track = session.track
+		local robloxTrack = self:TEMPGetRobloxTrack(track.audioAssetId)
+
+		return buildClientFriendlyTrack(player.UserId, track, robloxTrack)
+	end
+
+	ReplicatedStorage.Styngr.SkipTrack.OnServerInvoke = function(player)
+		local ok, session = self:SkipTrack(player.UserId):await()
+
+		print(session)
+
+		assert(ok, "Failed to skip track!")
 
 		local track = session.track
 		local robloxTrack = self:TEMPGetRobloxTrack(track.audioAssetId)
