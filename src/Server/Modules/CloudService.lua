@@ -184,6 +184,10 @@ function CloudService:Call(token, endpoint, method, body)
 
 		if body then
 			request.Body = HttpService:JSONEncode(body)
+		else
+			if method == "POST" then
+				request.Body = ""
+			end
 		end
 
 		local ok, result = pcall(HttpService.RequestAsync, HttpService, request)
