@@ -26,6 +26,14 @@ function StyngrService.BuildClientFriendlyTrack(userId, track, robloxTrack)
 	}
 end
 
+function StyngrService:_getPlayersPlaylists(userId: number)
+	return self._playlists[userId]
+end
+
+function StyngrService:_setPlayersPlaylists(userId: number, playlists)
+	self._playlists[userId] = playlists
+end
+
 function StyngrService:_getSession(userId: number)
 	return self._sessions[userId]
 end
@@ -133,6 +141,7 @@ function StyngrService:SetConfiguration(inputConfiguration: Types.StyngrServiceC
 	self._sessions = {}
 	self._tracking = {}
 	self._connections = {}
+	self._playlists = {}
 
 	local SongEventsConnection = ReplicatedStorage.Styngr.SongEvents.OnServerEvent:Connect(
 		function(player: Player, event)
@@ -168,7 +177,7 @@ function StyngrService:SetConfiguration(inputConfiguration: Types.StyngrServiceC
 
 		print(session)
 
-		assert(ok, "Failed to request next track!")
+		assert(ok and session, "Failed to request next track!")
 
 		local track = session.track
 		local robloxTrack = self:TEMPGetRobloxTrack(track.audioAssetId)
@@ -181,7 +190,7 @@ function StyngrService:SetConfiguration(inputConfiguration: Types.StyngrServiceC
 
 		print(session)
 
-		assert(ok, "Failed to skip track!")
+		assert(ok and session, "Failed to request next track!")
 
 		local track = session.track
 		local robloxTrack = self:TEMPGetRobloxTrack(track.audioAssetId)
@@ -211,6 +220,14 @@ function StyngrService:GetPlaylists(userId: number)
 				local body = HttpService:JSONDecode(result.Body)
 
 				if body["playlists"] then
+					local playlistsById = {}
+
+					for _, playlist in body["playlists"] do
+						playlistsById[playlist.id] = playlist
+					end
+
+					self:_setPlayersPlaylists(userId, playlistsById)
+
 					resolve(body["playlists"])
 				else
 					reject()
@@ -228,7 +245,10 @@ function StyngrService:StartPlaylistSession(userId: number, playlistId: string)
 	local existingSession = self:_getSession(userId)
 
 	if existingSession and existingSession.playlistId == playlistId then
-		return existingSession
+		-- TODO: This is potentially bad, let's think through resuming AND switching between playlists (maybe we need some state to determine if a playlist is currently playing?)
+		return Promise.new(function(_, reject)
+			reject("An existing session for this playlist is already in action!")
+		end)
 	end
 
 	return self._cloudService
@@ -245,6 +265,7 @@ function StyngrService:StartPlaylistSession(userId: number, playlistId: string)
 				local session = HttpService:JSONDecode(result.Body)
 
 				session.playlistId = playlistId
+				session.tracksPlayed = 1
 
 				self:_startTrack(userId)
 				self:_setSession(userId, session)
@@ -298,12 +319,22 @@ function StyngrService:RequestNextTrack(userId: number)
 
 	assert(session, "No session found for user " .. userId .. "!")
 
+	local playlist = self:_getPlayersPlaylists(userId)[session.playlistId]
+
+	assert(playlist, "This playlist does not exist for the user!")
+
 	local statistics = self:_endTrack(userId)
 	local duration = ISODurations.TranslateSecondsToDuration(statistics.duration)
 
-	print(duration)
+	if session.tracksPlayed >= playlist.trackCount then
+		self:_setSession(userId, nil)
 
-	print(statistics)
+		-- TODO: Report statistics!
+
+		return Promise.new(function(resolve)
+			resolve(nil)
+		end)
+	end
 
 	return self._cloudService
 		:GetToken(userId)
@@ -333,11 +364,16 @@ function StyngrService:RequestNextTrack(userId: number)
 				local track = HttpService:JSONDecode(result.Body)
 
 				session.track = track
+				session.tracksPlayed += 1
 
 				self:_startTrack(userId)
+				self:_setSession(userId, session)
 
 				resolve(session)
 			end)
+		end)
+		:catch(function()
+			print("hello")
 		end)
 end
 
@@ -351,8 +387,22 @@ function StyngrService:SkipTrack(userId: number)
 
 	assert(session, "No session found for user " .. userId .. "!")
 
+	local playlist = self:_getPlayersPlaylists(userId)[session.playlistId]
+
+	assert(playlist, "This playlist does not exist for the user!")
+
 	local statistics = self:_endTrack(userId)
 	local duration = ISODurations.TranslateSecondsToDuration(statistics.duration)
+
+	if session.tracksPlayed >= playlist.trackCount then
+		self:_setSession(userId, nil)
+
+		-- TODO: Report statistics!
+
+		return Promise.new(function(resolve)
+			resolve(nil)
+		end)
+	end
 
 	return self._cloudService
 		:GetToken(userId)
@@ -382,8 +432,10 @@ function StyngrService:SkipTrack(userId: number)
 				local track = HttpService:JSONDecode(result.Body)
 
 				session.track = track
+				session.tracksPlayed += 1
 
 				self:_startTrack(userId)
+				self:_setSession(userId, session)
 
 				resolve(session)
 			end)

@@ -108,6 +108,7 @@ local function playSound(track)
 		SongEvents:FireServer("ENDED")
 
 		cleanup()
+		-- TODO: PCALL
 		local data = ReplicatedStorage.Styngr.RequestNextTrack:InvokeServer()
 
 		playSound(data)
@@ -163,6 +164,7 @@ function TogglePlaylistSelector()
 
 			Playlist.Title.Text = playlist.title
 			Playlist.Play.Activated:Connect(function()
+				-- TODO: PCALL
 				local data = ReplicatedStorage.Styngr.StartPlaylistSession:InvokeServer(playlist.id)
 
 				playSound(data)
