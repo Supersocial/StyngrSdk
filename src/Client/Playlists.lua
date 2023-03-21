@@ -7,6 +7,8 @@ local TweenService = game:GetService("TweenService")
 
 local Promise = require(ReplicatedStorage.Styngr.Packages.promise)
 
+local SongEvents = ReplicatedStorage.Styngr.SongEvents
+
 local Player = Players.LocalPlayer
 
 local PlayerGui = Player:WaitForChild("PlayerGui")
@@ -81,6 +83,8 @@ local function playSound(track)
 	sound.SoundId = track.assetId
 
 	sound.Paused:Connect(function()
+		SongEvents:FireServer("PAUSED")
+
 		if not tween then
 			return
 		end
@@ -89,6 +93,8 @@ local function playSound(track)
 	end)
 
 	sound.Resumed:Connect(function()
+		SongEvents:FireServer("RESUMED")
+
 		PlayPauseButton.Image = pauseIcon
 
 		if not tween then
@@ -99,6 +105,8 @@ local function playSound(track)
 	end)
 
 	sound.Ended:Connect(function()
+		SongEvents:FireServer("ENDED")
+
 		cleanup()
 		local data = ReplicatedStorage.Styngr.RequestNextTrack:InvokeServer()
 
@@ -106,13 +114,15 @@ local function playSound(track)
 	end)
 
 	sound.Played:Connect(function()
+		SongEvents:FireServer("PLAYED")
+
 		NowPlaying.Text = artists .. " - " .. track.title
 		PlayPauseButton.Image = pauseIcon
 		MaxTime.Text = secondsToMinutesAndSeconds(sound.TimeLength)
 
 		tween = TweenService:Create(
 			ProgressLine,
-			TweenInfo.new(sound.TimeLength),
+			TweenInfo.new(sound.TimeLength, Enum.EasingStyle.Linear, Enum.EasingDirection.In),
 			{ Position = UDim2.new({ 0, 0 }, { 0, 0 }) }
 		)
 		tween:Play()

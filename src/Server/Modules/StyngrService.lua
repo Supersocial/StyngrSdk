@@ -3,8 +3,6 @@
 
 	Core service for all server side SDK methods
 ]=]
-local ContentProvider = game:GetService("ContentProvider")
-
 local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
@@ -12,8 +10,21 @@ local ServerScriptService = game:GetService("ServerScriptService")
 local Promise = require(ReplicatedStorage.Styngr.Packages.promise)
 local CloudService = require(ServerScriptService.Styngr.Modules.CloudService)
 local Types = require(ServerScriptService.Styngr.Types)
+local ISODurations = require(ReplicatedStorage.Styngr.Utils.ISODurations)
 
 local StyngrService = {}
+
+function StyngrService.BuildClientFriendlyTrack(userId, track, robloxTrack)
+	local encryptionKey = game:GetService("NetworkServer"):EncryptStringForPlayerId(robloxTrack.key, userId)
+
+	return {
+		title = track.title,
+		artistNames = track.artistNames,
+		isLiked = track.isLiked,
+		assetId = robloxTrack.id,
+		encryptionKey = encryptionKey,
+	}
+end
 
 function StyngrService:_getSession(userId: number)
 	return self._sessions[userId]
@@ -21,6 +32,70 @@ end
 
 function StyngrService:_setSession(userId: number, session)
 	self._sessions[userId] = session
+end
+
+function StyngrService:_startTrack(userId: number)
+	assert(not self._tracking[userId], "Already tracking for this user!")
+
+	self._tracking[userId] = {
+		started = os.time(),
+		totalPaused = 0,
+	}
+end
+
+function StyngrService:_endTrack(userId: number)
+	local statistics = self._tracking[userId]
+
+	assert(statistics, "No active tracking for the specified user could be found!")
+
+	self._tracking[userId] = nil
+
+	local endTime = statistics.ended or os.time()
+
+	local duration = endTime - statistics.started
+
+	duration -= statistics.totalPaused
+
+	return {
+		started = statistics.started,
+		ended = endTime,
+		duration = duration,
+	}
+end
+
+function StyngrService:_clientTrackEvent(userId: number, event)
+	assert(event and (event == "PLAYED" or event == "ENDED" or event == "RESUMED" or event == "PAUSED"))
+
+	local statistics = self._tracking[userId]
+
+	assert(statistics)
+
+	if event == "PLAYED" then
+		assert(not statistics.ended)
+
+		statistics.started = os.time()
+	elseif event == "ENDED" then
+		assert(statistics.started)
+
+		local ended = os.time()
+
+		assert(statistics.started <= ended)
+
+		statistics.ended = ended
+	elseif event == "RESUMED" then
+		local paused = os.time() - statistics.paused
+
+		assert(paused >= 0)
+
+		statistics.paused = nil
+		statistics.totalPaused += paused
+	elseif event == "PAUSED" then
+		assert(not statistics.paused)
+
+		statistics.paused = os.time()
+	end
+
+	self._tracking[userId] = statistics
 end
 
 --[=[
@@ -47,8 +122,72 @@ function StyngrService:SetConfiguration(inputConfiguration: Types.StyngrServiceC
 		inputConfiguration.apiServer = "https://stg.api.styngr.com/api/v1/sdk/"
 	end
 
+	if self._connections then
+		for _, connection in self._connections do
+			connection:Disconnect()
+		end
+	end
+
 	self._cloudService = CloudService.new(inputConfiguration)
 	self._configuration = inputConfiguration
+	self._sessions = {}
+	self._tracking = {}
+	self._connections = {}
+
+	local SongEventsConnection = ReplicatedStorage.Styngr.SongEvents.OnServerEvent:Connect(
+		function(player: Player, event)
+			self:_clientTrackEvent(player.UserId, event)
+		end
+	)
+
+	table.insert(self._connections, SongEventsConnection)
+
+	ReplicatedStorage.Styngr.GetPlaylists.OnServerInvoke = function(player)
+		local ok, result = self:GetPlaylists(player.UserId):await()
+
+		assert(ok, "Failed to get playlists!")
+
+		return result
+	end
+
+	ReplicatedStorage.Styngr.StartPlaylistSession.OnServerInvoke = function(player, playlistId)
+		assert(typeof(playlistId) == "string")
+
+		local ok, session = self:StartPlaylistSession(player.UserId, playlistId):await()
+
+		assert(ok, "Failed to start playlist session!")
+
+		local track = session.track
+		local robloxTrack = self:TEMPGetRobloxTrack(track.audioAssetId)
+
+		return StyngrService.BuildClientFriendlyTrack(player.UserId, track, robloxTrack)
+	end
+
+	ReplicatedStorage.Styngr.RequestNextTrack.OnServerInvoke = function(player)
+		local ok, session = self:RequestNextTrack(player.UserId):await()
+
+		print(session)
+
+		assert(ok, "Failed to request next track!")
+
+		local track = session.track
+		local robloxTrack = self:TEMPGetRobloxTrack(track.audioAssetId)
+
+		return StyngrService.BuildClientFriendlyTrack(player.UserId, track, robloxTrack)
+	end
+
+	ReplicatedStorage.Styngr.SkipTrack.OnServerInvoke = function(player)
+		local ok, session = self:SkipTrack(player.UserId):await()
+
+		print(session)
+
+		assert(ok, "Failed to skip track!")
+
+		local track = session.track
+		local robloxTrack = self:TEMPGetRobloxTrack(track.audioAssetId)
+
+		return StyngrService.BuildClientFriendlyTrack(player.UserId, track, robloxTrack)
+	end
 end
 
 --[=[
@@ -107,6 +246,7 @@ function StyngrService:StartPlaylistSession(userId: number, playlistId: string)
 
 				session.playlistId = playlistId
 
+				self:_startTrack(userId)
 				self:_setSession(userId, session)
 
 				resolve(session)
@@ -158,6 +298,13 @@ function StyngrService:RequestNextTrack(userId: number)
 
 	assert(session, "No session found for user " .. userId .. "!")
 
+	local statistics = self:_endTrack(userId)
+	local duration = ISODurations.TranslateSecondsToDuration(statistics.duration)
+
+	print(duration)
+
+	print(statistics)
+
 	return self._cloudService
 		:GetToken(userId)
 		:andThen(function(token)
@@ -171,8 +318,8 @@ function StyngrService:RequestNextTrack(userId: number)
 					statistics = {
 						{
 							trackId = session.track.trackId,
-							start = DateTime.now():ToIsoDate(),
-							duration = "PT3M",
+							start = DateTime.fromUnixTimestamp(statistics.started):ToIsoDate(),
+							duration = duration,
 							autoplay = true,
 							isMuted = false,
 							clientTimestampOffset = "",
@@ -186,6 +333,8 @@ function StyngrService:RequestNextTrack(userId: number)
 				local track = HttpService:JSONDecode(result.Body)
 
 				session.track = track
+
+				self:_startTrack(userId)
 
 				resolve(session)
 			end)
@@ -202,6 +351,9 @@ function StyngrService:SkipTrack(userId: number)
 
 	assert(session, "No session found for user " .. userId .. "!")
 
+	local statistics = self:_endTrack(userId)
+	local duration = ISODurations.TranslateSecondsToDuration(statistics.duration)
+
 	return self._cloudService
 		:GetToken(userId)
 		:andThen(function(token)
@@ -215,8 +367,8 @@ function StyngrService:SkipTrack(userId: number)
 					statistics = {
 						{
 							trackId = session.track.trackId,
-							start = DateTime.now():ToIsoDate(),
-							duration = "PT3M",
+							start = DateTime.fromUnixTimestamp(statistics.started):ToIsoDate(),
+							duration = duration,
 							autoplay = true,
 							isMuted = false,
 							clientTimestampOffset = "",
@@ -231,82 +383,11 @@ function StyngrService:SkipTrack(userId: number)
 
 				session.track = track
 
+				self:_startTrack(userId)
+
 				resolve(session)
 			end)
 		end)
 end
-
-local function buildClientFriendlyTrack(userId, track, robloxTrack)
-	local encryptionKey = game:GetService("NetworkServer"):EncryptStringForPlayerId(robloxTrack.key, userId)
-
-	return {
-		title = track.title,
-		artistNames = track.artistNames,
-		isLiked = track.isLiked,
-		assetId = robloxTrack.id,
-		encryptionKey = encryptionKey,
-	}
-end
-
---[[
-	Initialization method
-]]
-function StyngrService:Init()
-	self._cloudService = {}
-	self._configuration = {}
-	self._sessions = {}
-
-	ReplicatedStorage.Styngr.GetPlaylists.OnServerInvoke = function(player)
-		local ok, result = self:GetPlaylists(player.UserId):await()
-
-		assert(ok, "Failed to get playlists!")
-
-		return result
-	end
-
-	ReplicatedStorage.Styngr.StartPlaylistSession.OnServerInvoke = function(player, playlistId)
-		assert(typeof(playlistId) == "string")
-
-		local ok, session = self:StartPlaylistSession(player.UserId, playlistId):await()
-
-		assert(ok, "Failed to start playlist session!")
-
-		local track = session.track
-		local robloxTrack = self:TEMPGetRobloxTrack(track.audioAssetId)
-
-		return buildClientFriendlyTrack(player.UserId, track, robloxTrack)
-	end
-
-	ReplicatedStorage.Styngr.RequestNextTrack.OnServerInvoke = function(player)
-		local ok, session = self:RequestNextTrack(player.UserId):await()
-
-		print(session)
-
-		assert(ok, "Failed to request next track!")
-
-		local track = session.track
-		local robloxTrack = self:TEMPGetRobloxTrack(track.audioAssetId)
-
-		return buildClientFriendlyTrack(player.UserId, track, robloxTrack)
-	end
-
-	ReplicatedStorage.Styngr.SkipTrack.OnServerInvoke = function(player)
-		local ok, session = self:SkipTrack(player.UserId):await()
-
-		print(session)
-
-		assert(ok, "Failed to skip track!")
-
-		local track = session.track
-		local robloxTrack = self:TEMPGetRobloxTrack(track.audioAssetId)
-
-		return buildClientFriendlyTrack(player.UserId, track, robloxTrack)
-	end
-end
-
---[[
-	Start method
-]]
-function StyngrService:Start() end
 
 return StyngrService

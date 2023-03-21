@@ -15,6 +15,9 @@
 					"$className": "Folder",
 					"$path": "DevPackages"
 				},
+				"SongEvents": {
+					"$className": "RemoteEvent"
+				},
 				"GetPlaylists": {
 					"$className": "RemoteFunction"
 				},
