@@ -157,6 +157,7 @@ function TogglePlaylistSelector()
 	if nextState then
 		ScrollingFrame:ClearAllChildren()
 
+		-- TODO: PCALL
 		local playlists = ReplicatedStorage.Styngr.GetPlaylists:InvokeServer()
 
 		for _, playlist in playlists do
