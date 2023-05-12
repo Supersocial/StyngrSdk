@@ -5,7 +5,7 @@ file_version: 1.1.2
 app_version: 1.8.5
 ---
 
-## Step 1: Download the latest release
+# Step 1: Download the latest release
 
 ## Rojo Users
 
@@ -14,8 +14,6 @@ app_version: 1.8.5
 2\. Unzip the file, and move the contents of the folders to their specified location
 
 a. I.e contents of `ServerScriptService` folder are placed in `ServerScriptService`
-
-<br/>
 
 ## Vanilla Studio Users
 
@@ -27,13 +25,50 @@ a. I.e contents of `ServerScriptService` folder are placed in `ServerScriptServi
 
 a. I.e contents of `ServerScriptService` folder are placed in `ServerScriptService`
 
+# Step 2: Bootstrapping the SDK
+
+**This particular implementation detail will vary based on the architecture of your codebase.**
+
+Once the SDK has been installed into your codebase, the next step is to bootstrap it. This will make the necessary calls to the backend, as well as secure the authentication tokens needed for the functionality.
+
 <br/>
 
-## Step 2: Bootstrapping the SDK
+Here's some example code of the SDK being initialized
 
-Once the SDK has been installed into your codebase, the next step is to bootstrap it. This will
+```lua
+local StyngrService = require("path.to.StyngrService")
+
+StyngrService:SetConfiguration({
+	apiKey = "...",
+	appId = "...",
+})
+```
+
+**This code should be run somewhere before the** `StyngrSdk` **is interacted with**
 
 <br/>
+
+# Step 3: Binding SDK UI
+
+This SDK uses Fusion to generate a pre-designed User Interface. You'll most likely want to bind this User Interface to a button you control.
+
+<br/>
+
+Here's some example code of the SDK UI being toggled by a button
+
+```lua
+local StyngrClient = require("path.to.StyngrClient")
+
+SomeUiButton.MouseButton1Down:Connect(function()
+	StyngrClient:Toggle()
+end)
+```
+
+<br/>
+
+# Step 4: Test the Implementation
+
+At this point, the SDK has been installed, initialized, authenticated and bound to a UI button. The last step is to test the implementation to ensure it has been integrated properly.
 
 <br/>
 
