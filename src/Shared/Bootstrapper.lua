@@ -25,15 +25,17 @@ return function(parent: Instance): ()
 
 	-- initialize all modules
 	for handler, module in initializationPool do
-		print(string.format("Initializing %s", handler))
-
-		module:Init()
+		if module.Init then
+			print(string.format("Initializing %s", handler))
+			module:Init()
+		end
 	end
 
 	-- start all modules
 	for handler, module in initializationPool do
-		print(string.format("Starting %s", handler))
-
-		module:Start()
+		if module.Start then
+			print(string.format("Starting %s", handler))
+			module:Start()
+		end
 	end
 end
