@@ -521,11 +521,11 @@ function StyngrService:_createTransaction(token: string, bundleToPurchase: strin
 		end)
 end
 
-function StyngrService:_confirmTransaction(player: Player, token: string, transactionId: string)
+function StyngrService:_confirmTransaction(player: Player, transactionId: string)
 	return Promise.new(function(resolve)
 		resolve(LocalizationService:GetCountryRegionForPlayerAsync(player))
 	end):andThen(function(countryRegion)
-		return self._cloudService:Call(token, "/v1/sdk/payments/confirm", "POST", {
+		return self._cloudService:CallAsApi("/v1/sdk/payments/confirm", "POST", {
 			trxId = transactionId,
 			appId = self._cloudService._configuration.appId,
 			billingType = "BUNDLE",
@@ -545,7 +545,7 @@ function StyngrService:CreateAndConfirmTransaction(player: Player, bundleToPurch
 
 	return self._cloudService:GetToken(player):andThen(function(token)
 		return self:_createTransaction(token, bundleToPurchase):andThen(function(transactionId)
-			return self:_confirmTransaction(player, token, transactionId)
+			return self:_confirmTransaction(player, transactionId)
 		end)
 	end)
 end

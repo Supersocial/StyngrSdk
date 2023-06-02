@@ -87,35 +87,16 @@ function CloudService:_createToken(userId: number, countryCode: string)
 			countryCode = countryCode,
 		}
 
-		local request = {
-			Url = self._configuration.apiServer .. "/v2/sdk/tokens",
-			Method = "POST",
-			Headers = {
-				["x-api-token"] = self._configuration.apiKey,
-				Accept = "application/json",
-				["Content-Type"] = "application/json",
-			},
-			Body = HttpService:JSONEncode(body),
-		}
+		self:CallAsApi("/v2/sdk/tokens", "POST", body):andThen(function(result)
+			local resultBody = HttpService:JSONDecode(result.Body)
 
-		local ok, result = pcall(HttpService.RequestAsync, HttpService, request)
-
-		if ok then
-			if result.Success then
-				local resultBody = HttpService:JSONDecode(result.Body)
-
-				if resultBody["token"] then
-					self._tokens[userId] = resultBody["token"]
-					resolve(resultBody["token"])
-				else
-					reject(result)
-				end
+			if resultBody["token"] then
+				self._tokens[userId] = resultBody["token"]
+				resolve(resultBody["token"])
 			else
 				reject(result)
 			end
-		else
-			reject(result)
-		end
+		end)
 	end)
 end
 
@@ -201,6 +182,59 @@ function CloudService:Call(token, endpoint, method, body)
 			Method = method,
 			Headers = {
 				Authorization = "Bearer " .. token,
+				Accept = "application/json",
+				["Content-Type"] = "application/json",
+			},
+		}
+
+		if body then
+			request.Body = HttpService:JSONEncode(body)
+		else
+			if method == "POST" then
+				request.Body = ""
+			end
+		end
+
+		local ok, result = pcall(HttpService.RequestAsync, HttpService, request)
+
+		if ok then
+			if result.Success == true then
+				resolve(result)
+			else
+				reject(result)
+			end
+		else
+			reject(result)
+		end
+	end)
+end
+
+--[=[
+	Wraps around the default `HttpService:Request()` method to include headers and additional metadata for the API request
+
+	@param endpoint string -- The endpoint to call externally
+	@param method string -- The method to use (GET, POST, PATCH, DELETE, PUT)
+	@param body table? -- A table containing any data you want to follow along with your request
+]=]
+function CloudService:CallAsApi(endpoint, method, body)
+	assert(
+		endpoint and typeof(endpoint) == "string" and method and typeof(method) == "string",
+		"Please ensure all parameters have been passed in and are of correct type!"
+	)
+
+	method = string.upper(method)
+
+	assert(
+		method == "POST" or method == "GET" or method == "PUT" or method == "PATCH" or method == "DELETE",
+		"Invalid HTTP method."
+	)
+
+	return Promise.new(function(resolve, reject)
+		local request = {
+			Url = self._configuration.apiServer .. endpoint,
+			Method = method,
+			Headers = {
+				["x-api-token"] = self._configuration.apiKey,
 				Accept = "application/json",
 				["Content-Type"] = "application/json",
 			},
