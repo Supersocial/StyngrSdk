@@ -260,6 +260,12 @@ function StyngrService:SetConfiguration(inputConfiguration: Types.StyngrServiceC
 		end
 
 		return self:CreateAndConfirmTransaction(player, bundleToPurchase):andThen(function()
+			local ok, streamsAvailable = self:GetNumberOfStreamsAvailable(player):await()
+
+			if ok then
+				ReplicatedStorage.Styngr.NewDataEvent:FireClient(player, "STREAMS_AVAILABLE", streamsAvailable)
+			end
+
 			return Enum.ProductPurchaseDecision.PurchaseGranted
 		end, function(error)
 			warn(error)
@@ -290,7 +296,7 @@ function StyngrService:GetPlaylists(player: Player)
 
 			self:_setPlayersPlaylists(player.UserId, playlistsById)
 
-			resolve(body["playlists"])
+			resolve(body)
 		end)
 	end)
 end

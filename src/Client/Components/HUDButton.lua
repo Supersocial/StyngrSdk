@@ -41,6 +41,11 @@ local function HUDButton()
 		[OnEvent("Activated")] = function()
 			State:update(function(prev)
 				if prev.interfaceState == InterfaceStates.CLOSED then
+					local result = ReplicatedStorage.Styngr.GetNumberOfStreamsAvailable:InvokeServer()
+
+					assert(typeof(result) == "number", "Number of streams available returned is not a number, abort...")
+
+					prev.streamsAvailable = result
 					prev.interfaceState = InterfaceStates.PLAYER
 				else
 					prev.interfaceState = InterfaceStates.CLOSED

@@ -71,11 +71,12 @@ local function Header()
 				Size = UDim2.fromScale(1, 1),
 
 				[OnEvent("Activated")] = function()
-					local playlists = ReplicatedStorage.Styngr.GetPlaylists:InvokeServer()
+					local result = ReplicatedStorage.Styngr.GetPlaylists:InvokeServer()
 
 					State:update(function(prev)
-						prev.playlists = playlists
+						prev.playlists = result.playlists
 						prev.interfaceState = InterfaceStates.PLAYLIST
+						prev.streamsAvailable = result.remainingNumberOfStreams
 
 						return prev
 					end)
