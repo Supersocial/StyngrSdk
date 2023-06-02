@@ -1,10 +1,21 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local StarterPlayer = game:GetService("StarterPlayer")
+
+local State = require(ReplicatedStorage.Styngr.State)
 local Fusion = require(ReplicatedStorage.Styngr.Packages.fusion)
 
 local New = Fusion.New
 local Children = Fusion.Children
+local Computed = Fusion.Computed
+local OnEvent = Fusion.OnEvent
+
+local InterfaceStates = require(StarterPlayer.StarterPlayerScripts.Styngr.InterfaceStates)
 
 local function Footer()
+	local streamsAvailable = Computed(function()
+		return State:get().streamsAvailable .. " streams left"
+	end)
+
 	return New("Frame")({
 		Name = "Footer",
 		AnchorPoint = Vector2.new(0, 1),
@@ -27,11 +38,21 @@ local function Footer()
 				CornerRadius = UDim.new(0, 6),
 			}),
 
-			New("Frame")({
+			New("TextButton")({
 				Name = "Left",
 				BackgroundColor3 = Color3.fromRGB(255, 255, 255),
 				BackgroundTransparency = 1,
 				Size = UDim2.fromScale(0.5, 1),
+
+				Text = "",
+
+				[OnEvent("Activated")] = function()
+					State:update(function(prev)
+						prev.interfaceState = InterfaceStates.STREAMS
+
+						return prev
+					end)
+				end,
 
 				[Children] = {
 					New("TextLabel")({
@@ -41,7 +62,7 @@ local function Footer()
 							Enum.FontWeight.Bold,
 							Enum.FontStyle.Normal
 						),
-						Text = "12 Streams left",
+						Text = streamsAvailable,
 						TextColor3 = Color3.fromRGB(255, 255, 255),
 						TextScaled = true,
 						TextSize = 32,

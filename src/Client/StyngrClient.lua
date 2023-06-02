@@ -3,9 +3,7 @@ local StyngrClient = {}
 
 StyngrClient.__index = StyngrClient
 
-local Fusion = require(ReplicatedStorage.Styngr.Packages.fusion)
-
-local Value = Fusion.Value
+local State = require(ReplicatedStorage.Styngr.State)
 
 local InterfaceService = require(script.Parent.InterfaceService)
 local InterfaceStates = require(script.Parent.InterfaceStates)
@@ -13,26 +11,51 @@ local InterfaceStates = require(script.Parent.InterfaceStates)
 function StyngrClient.new()
 	local self = setmetatable({}, StyngrClient)
 
-	self._state = Value(InterfaceStates.CLOSED)
-	self._showButton = Value(true)
-	self._interfaceService = InterfaceService:Init(self._state, self._showButton)
+	self._interfaceService = InterfaceService:Init()
+
+	ReplicatedStorage.Styngr.NewDataEvent.OnClientEvent:Connect(function(type, data)
+		assert(typeof(type) == "string")
+
+		assert(data)
+
+		if type == "STREAMS_AVAILABLE" then
+			assert(typeof(data) == "number")
+
+			State:update(function(prev)
+				prev.streamsAvailable = data
+
+				return prev
+			end)
+		end
+	end)
 
 	return self
 end
 
 function StyngrClient:Toggle()
-	local closed = self._state:get() == InterfaceStates.CLOSED
+	local closed = State:get().interfaceState == InterfaceStates.CLOSED
 
 	if closed then
-		-- TODO: Add conditional to open X depending on Y, right now we always open the player though
-		self._state:set(InterfaceStates.PLAYER)
+		State:update(function(prev)
+			prev.interfaceState = InterfaceStates.PLAYER
+
+			return prev
+		end)
 	else
-		self._state:set(InterfaceStates.CLOSED)
+		State:update(function(prev)
+			prev.interfaceState = InterfaceStates.CLOSED
+
+			return prev
+		end)
 	end
 end
 
 function StyngrClient:SetVisible(state)
-	self._showButton:set(state)
+	State:update(function(prev)
+		prev.showButton = state
+
+		return prev
+	end)
 end
 
 return StyngrClient.new()

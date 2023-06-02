@@ -1,14 +1,51 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local StarterPlayer = game:GetService("StarterPlayer")
+
+local State = require(ReplicatedStorage.Styngr.State)
 local Fusion = require(ReplicatedStorage.Styngr.Packages.fusion)
 
 local New = Fusion.New
 local Children = Fusion.Children
 local OnEvent = Fusion.OnEvent
+local Computed = Fusion.Computed
 
 local InterfaceStates = require(StarterPlayer.StarterPlayerScripts.Styngr.InterfaceStates)
 
-local function Header(props)
+local function Header()
+	local title = Computed(function()
+		local nowPlaying = State:get().nowPlaying
+
+		if not nowPlaying then
+			return ""
+		end
+
+		return nowPlaying.title
+	end)
+
+	local artists = Computed(function()
+		local nowPlaying = State:get().nowPlaying
+
+		if not nowPlaying then
+			return ""
+		end
+
+		return nowPlaying.artists
+	end)
+
+	local playPauseImage = Computed(function()
+		local nowPlaying = State:get().nowPlaying
+
+		if not nowPlaying then
+			return "rbxassetid://13551674540"
+		end
+
+		if nowPlaying.paused then
+			return "rbxassetid://13551674641"
+		end
+
+		return "rbxassetid://13171794794"
+	end)
+
 	return New("Frame")({
 		Name = "Header",
 		AnchorPoint = Vector2.new(0, 0),
@@ -34,7 +71,14 @@ local function Header(props)
 				Size = UDim2.fromScale(1, 1),
 
 				[OnEvent("Activated")] = function()
-					props.State:set(InterfaceStates.PLAYLIST)
+					local playlists = ReplicatedStorage.Styngr.GetPlaylists:InvokeServer()
+
+					State:update(function(prev)
+						prev.playlists = playlists
+						prev.interfaceState = InterfaceStates.PLAYLIST
+
+						return prev
+					end)
 				end,
 
 				[Children] = {
@@ -94,7 +138,7 @@ local function Header(props)
 									Enum.FontWeight.Regular,
 									Enum.FontStyle.Normal
 								),
-								Text = "Elton John's Greatest Hits",
+								Text = artists,
 								TextColor3 = Color3.fromRGB(255, 255, 255),
 								TextScaled = true,
 								TextYAlignment = Enum.TextYAlignment.Top,
@@ -108,7 +152,7 @@ local function Header(props)
 									Enum.FontWeight.Bold,
 									Enum.FontStyle.Normal
 								),
-								Text = "I'm Still Standing",
+								Text = title,
 								TextColor3 = Color3.fromRGB(255, 255, 255),
 								TextScaled = true,
 								TextYAlignment = Enum.TextYAlignment.Top,
@@ -129,7 +173,8 @@ local function Header(props)
 									New("Frame")({
 										Name = "Line",
 										BackgroundColor3 = Color3.fromRGB(122, 247, 255),
-										Size = UDim2.fromScale(0.3, 1),
+										Size = UDim2.fromScale(1, 1),
+										Position = UDim2.fromScale(-1, 0),
 									}),
 								},
 							}),
@@ -137,10 +182,30 @@ local function Header(props)
 					}),
 					New("ImageButton")({
 						Name = "PlayPause",
-						Image = "rbxassetid://13171794794",
+						Image = playPauseImage,
 						BackgroundColor3 = Color3.fromRGB(255, 255, 255),
 						BackgroundTransparency = 1,
 						Size = UDim2.fromScale(1, 0.643),
+
+						[OnEvent("Activated")] = function()
+							if not State:get().nowPlaying then
+								return
+							end
+
+							State:update(function(prev)
+								local nowPlaying = prev.nowPlaying
+
+								if nowPlaying.paused then
+									nowPlaying.instance:Resume()
+									nowPlaying.paused = false
+								else
+									nowPlaying.instance:Pause()
+									nowPlaying.paused = true
+								end
+
+								return prev
+							end)
+						end,
 
 						[Children] = {
 							New("UIAspectRatioConstraint")({

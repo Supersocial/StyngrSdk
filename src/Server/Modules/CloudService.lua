@@ -5,6 +5,7 @@
 ]=]
 
 local HttpService = game:GetService("HttpService")
+local LocalizationService = game:GetService("LocalizationService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
@@ -35,6 +36,12 @@ function CloudService.new(inputConfiguration: Types.CloudServiceConfiguration)
 	local self = {
 		_tokens = {},
 		_configuration = inputConfiguration,
+		_bundles = {
+			"SUBSCRIPTION_RADIO_BUNDLE_SMALL",
+			"SUBSCRIPTION_RADIO_BUNDLE_MEDIUM",
+			"SUBSCRIPTION_RADIO_BUNDLE_LARGE",
+			"SUBSCRIPTION_RADIO_BUNDLE_FREE",
+		},
 	}
 
 	setmetatable(self, CloudService)
@@ -61,7 +68,7 @@ end
 --[[
 	Makes a HttpService call to the external API that returns a token for the specified userId
 ]]
-function CloudService:_createToken(userId: number)
+function CloudService:_createToken(userId: number, countryCode: string)
 	assert(
 		self._tokens,
 		"Please make sure that you have set up a new CloudService instance before calling this method!"
@@ -69,16 +76,19 @@ function CloudService:_createToken(userId: number)
 
 	assert(typeof(userId) == "number", "Please pass in a valid userId!")
 
+	assert(typeof(countryCode) == "string", "Please pass in a valid countryCode!")
+
 	return Promise.new(function(resolve, reject)
 		local body = {
 			appId = self._configuration.appId,
 			deviceId = "",
-			expiresIn = "PT1H",
+			expiresIn = "PT3H",
 			userId = tostring(userId),
+			countryCode = countryCode,
 		}
 
 		local request = {
-			Url = self._configuration.apiServer .. "/tokens",
+			Url = self._configuration.apiServer .. "/v2/sdk/tokens",
 			Method = "POST",
 			Headers = {
 				["x-api-token"] = self._configuration.apiKey,
@@ -133,21 +143,28 @@ function CloudService:_readToken(userId: number)
 end
 
 --[=[
-	Gets or creates token for the specified userId
+	Gets or creates token for the specified player
 
-	@param userId number -- User to get or create token for
+	@param player Player -- User to get or create token for
 ]=]
-function CloudService:GetToken(userId: number)
+function CloudService:GetToken(player: Player)
 	assert(
 		self._tokens,
 		"Please make sure that you have set up a new CloudService instance before calling this method!"
 	)
 
-	assert(typeof(userId) == "number", "Please pass in a valid userId!")
+	assert(player, "Please pass in a valid player!")
 
 	return Promise.new(function(resolve, reject)
-		self:_readToken(userId):andThen(resolve, function()
-			self:_createToken(userId):andThen(resolve, reject)
+		self:_readToken(player.UserId):andThen(resolve, function()
+			local result, countryCode =
+				pcall(LocalizationService.GetCountryRegionForPlayerAsync, LocalizationService, player)
+
+			if not result then
+				reject("Country code could not be gotten for player, aborting flow.")
+			end
+
+			self:_createToken(player.UserId, countryCode):andThen(resolve, reject)
 		end)
 	end)
 end
@@ -169,6 +186,13 @@ function CloudService:Call(token, endpoint, method, body)
 			and method
 			and typeof(method) == "string",
 		"Please ensure all parameters have been passed in and are of correct type!"
+	)
+
+	method = string.upper(method)
+
+	assert(
+		method == "POST" or method == "GET" or method == "PUT" or method == "PATCH" or method == "DELETE",
+		"Invalid HTTP method."
 	)
 
 	return Promise.new(function(resolve, reject)

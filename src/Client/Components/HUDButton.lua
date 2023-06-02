@@ -1,5 +1,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local StarterPlayer = game:GetService("StarterPlayer")
+
+local State = require(ReplicatedStorage.Styngr.State)
 local Fusion = require(ReplicatedStorage.Styngr.Packages.fusion)
 
 local New = Fusion.New
@@ -9,9 +11,9 @@ local OnEvent = Fusion.OnEvent
 
 local InterfaceStates = require(StarterPlayer.StarterPlayerScripts.Styngr.InterfaceStates)
 
-local function HUDButton(props)
+local function HUDButton()
 	local closed = Computed(function()
-		return props.State:get() == InterfaceStates.CLOSED
+		return State:get().interfaceState == InterfaceStates.CLOSED
 	end)
 
 	return New("ImageButton")({
@@ -37,12 +39,15 @@ local function HUDButton(props)
 		Size = UDim2.fromScale(1, 0.083),
 
 		[OnEvent("Activated")] = function()
-			if closed:get() then
-				-- TODO: Add conditional to open X depending on Y, right now we always open the player though
-				props.State:set(InterfaceStates.PLAYER)
-			else
-				props.State:set(InterfaceStates.CLOSED)
-			end
+			State:update(function(prev)
+				if prev.interfaceState == InterfaceStates.CLOSED then
+					prev.interfaceState = InterfaceStates.PLAYER
+				else
+					prev.interfaceState = InterfaceStates.CLOSED
+				end
+
+				return prev
+			end)
 		end,
 
 		[Children] = {

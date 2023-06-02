@@ -15,6 +15,9 @@
 					"$className": "Folder",
 					"$path": "DevPackages"
 				},
+				"NewDataEvent": {
+					"$className": "RemoteEvent"
+				},
 				"SongEvents": {
 					"$className": "RemoteEvent"
 				},
@@ -28,6 +31,9 @@
 					"$className": "RemoteFunction"
 				},
 				"SkipTrack": {
+					"$className": "RemoteFunction"
+				},
+				"GetNumberOfStreamsAvailable": {
 					"$className": "RemoteFunction"
 				}
 			}

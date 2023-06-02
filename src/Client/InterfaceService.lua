@@ -5,6 +5,7 @@ local InterfaceService = {}
 
 InterfaceService.__index = InterfaceService
 
+local State = require(ReplicatedStorage.Styngr.State)
 local Fusion = require(ReplicatedStorage.Styngr.Packages.fusion)
 
 local New = Fusion.New
@@ -18,12 +19,11 @@ local Components = script.Parent.Components
 local HUDButton = require(Components.HUDButton)
 local Player = require(Components.Player)
 local Playlist = require(Components.Playlist)
+local Streams = require(Components.Streams)
 
-local function StyngrFrame(props)
+local function StyngrFrame()
 	local children = Computed(function()
-		local currentWindow = props.State:get()
-
-		print(currentWindow)
+		local currentWindow = State:get().interfaceState
 
 		if currentWindow == InterfaceStates.CLOSED then
 			return {}
@@ -31,7 +31,7 @@ local function StyngrFrame(props)
 
 		if currentWindow == InterfaceStates.PLAYER then
 			return {
-				Player({ ["State"] = props.State }),
+				Player(),
 				New("UICorner")({
 					CornerRadius = UDim.new(0.149, 0),
 				}),
@@ -49,7 +49,20 @@ local function StyngrFrame(props)
 
 		if currentWindow == InterfaceStates.PLAYLIST then
 			return {
-				Playlist({}),
+				Playlist(),
+				New("UISizeConstraint")({
+					MinSize = Vector2.new(200, 170),
+				}),
+
+				New("UICorner")({
+					CornerRadius = UDim.new(0.0588, 0),
+				}),
+			}
+		end
+
+		if currentWindow == InterfaceStates.STREAMS then
+			return {
+				Streams(),
 				New("UISizeConstraint")({
 					MinSize = Vector2.new(200, 170),
 				}),
@@ -68,7 +81,7 @@ local function StyngrFrame(props)
 		Position = UDim2.fromScale(0.5, 0.5),
 
 		Size = Computed(function()
-			local currentWindow = props.State:get()
+			local currentWindow = State:get().interfaceState
 
 			if currentWindow == InterfaceStates.PLAYER then
 				return UDim2.fromScale(0.313, 0.186)
@@ -79,13 +92,13 @@ local function StyngrFrame(props)
 			end
 
 			if currentWindow == InterfaceStates.STREAMS then
-				return UDim2.fromScale(0.313, 0.186)
+				return UDim2.fromScale(0.313, 0.473)
 			end
 
 			return UDim2.fromScale(0, 0)
 		end),
 		BackgroundColor3 = Computed(function()
-			local currentWindow = props.State:get()
+			local currentWindow = State:get().interfaceState
 
 			if currentWindow == InterfaceStates.PLAYER then
 				return Color3.fromRGB(34, 34, 34)
@@ -96,13 +109,13 @@ local function StyngrFrame(props)
 			end
 
 			if currentWindow == InterfaceStates.STREAMS then
-				return Color3.fromRGB(34, 34, 34)
+				return Color3.fromRGB(17, 17, 17)
 			end
 
 			return Color3.new()
 		end),
 		BackgroundTransparency = Computed(function()
-			local currentWindow = props.State:get()
+			local currentWindow = State:get().interfaceState
 
 			if currentWindow == InterfaceStates.PLAYER then
 				return 0
@@ -113,14 +126,14 @@ local function StyngrFrame(props)
 			end
 
 			if currentWindow == InterfaceStates.STREAMS then
-				return 0
+				return 0.1
 			end
 
 			return 1
 		end),
 
 		Visible = Computed(function()
-			if props.State:get() == InterfaceStates.CLOSED then
+			if State:get().interfaceState == InterfaceStates.CLOSED then
 				return false
 			end
 
@@ -131,17 +144,17 @@ local function StyngrFrame(props)
 	})
 end
 
-function InterfaceService:Init(state, showButton)
+function InterfaceService:Init()
 	local children = Computed(function()
-		if showButton:get() then
+		if State:get().showButton then
 			return {
-				HUDButton({ ["State"] = state }),
-				StyngrFrame({ ["State"] = state }),
+				HUDButton(),
+				StyngrFrame(),
 			}
 		end
 
 		return {
-			StyngrFrame({ ["State"] = state }),
+			StyngrFrame(),
 		}
 	end)
 
