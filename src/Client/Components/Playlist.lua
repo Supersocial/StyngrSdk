@@ -148,8 +148,6 @@ local function Playlist()
 							return
 						end
 
-						track.playlistId = playlist.id
-
 						AudioService:PlaySound(track)
 
 						State:update(function(prev)

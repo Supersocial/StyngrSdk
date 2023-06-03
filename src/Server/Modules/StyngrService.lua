@@ -16,13 +16,13 @@ local ISODurations = require(ReplicatedStorage.Styngr.Utils.ISODurations)
 local StyngrService = {}
 
 function StyngrService.BuildClientFriendlyTrack(userId, track)
-	print("track", track)
 	assert(
 		track
 			and typeof(track["customMetadata"]) == "table"
 			and typeof(track["title"]) == "string"
 			and typeof(track["artistNames"]) == "table"
-			and typeof(track["isLiked"]) == "boolean",
+			and typeof(track["isLiked"]) == "boolean"
+			and typeof(track["playlistId"] == "string"),
 		"Please ensure the passed in track is valid and contains all necessary values."
 	)
 
@@ -33,9 +33,6 @@ function StyngrService.BuildClientFriendlyTrack(userId, track)
 		"Track's custom metadata does not contain necessary information."
 	)
 
-	print("customMetadata", customMetadata)
-	print("userId", userId)
-
 	local encryptionKey = game:GetService("NetworkServer"):EncryptStringForPlayerId(customMetadata.key, userId)
 
 	return {
@@ -44,6 +41,7 @@ function StyngrService.BuildClientFriendlyTrack(userId, track)
 		isLiked = track.isLiked,
 		assetId = customMetadata.id,
 		encryptionKey = encryptionKey,
+		playlistId = track.playlistId,
 	}
 end
 
@@ -93,7 +91,6 @@ function StyngrService:_endTrack(userId: number)
 end
 
 function StyngrService:_clientTrackEvent(userId: number, event)
-	print(userId, event, os.time())
 	assert(event and (event == "PLAYED" or event == "ENDED" or event == "RESUMED" or event == "PAUSED"))
 
 	local statistics = self._tracking[userId]
@@ -211,6 +208,8 @@ function StyngrService:SetConfiguration(inputConfiguration: Types.StyngrServiceC
 			return nil
 		end
 
+		session.track.playlistId = playlistId
+
 		return StyngrService.BuildClientFriendlyTrack(player.UserId, session.track)
 	end
 
@@ -246,6 +245,8 @@ function StyngrService:GetPlaylists(player: Player)
 		"Please initialize StyngrService using StyngrService.SetConfiguration() before calling this method!"
 	)
 
+	local _ = self:CreateAndConfirmTransaction(player, "SUBSCRIPTION_RADIO_BUNDLE_FREE"):await()
+
 	return self:_getPlaylistsRaw(player):andThen(function(body)
 		return Promise.new(function(resolve)
 			local playlistsById = {}
@@ -266,15 +267,6 @@ function StyngrService:StartPlaylistSession(player: Player, playlistId: string)
 		self._cloudService,
 		"Please initialize StyngrService using StyngrService.SetConfiguration() before calling this method!"
 	)
-
-	local existingSession = self:_getSession(player.UserId)
-
-	if existingSession and existingSession.playlistId == playlistId then
-		-- TODO: This is potentially bad, let's think through resuming AND switching between playlists (maybe we need some state to determine if a playlist is currently playing?)
-		return Promise.new(function(_, reject)
-			reject("An existing session for this playlist is already in action!")
-		end)
-	end
 
 	return self._cloudService
 		:GetToken(player)
@@ -317,16 +309,6 @@ function StyngrService:RequestNextTrack(player: Player)
 	local statistics = self:_endTrack(player.UserId)
 	local duration = ISODurations.TranslateSecondsToDuration(statistics.duration)
 
-	if session.tracksPlayed >= playlist.trackCount then
-		self:_setSession(player.UserId, nil)
-
-		-- TODO: Report statistics!
-
-		return Promise.new(function(resolve)
-			resolve(nil)
-		end)
-	end
-
 	return self._cloudService
 		:GetToken(player)
 		:andThen(function(token)
@@ -354,6 +336,8 @@ function StyngrService:RequestNextTrack(player: Player)
 			return Promise.new(function(resolve)
 				local track = HttpService:JSONDecode(result.Body)
 
+				track.playlistId = session.playlistId
+
 				session.track = track
 				session.tracksPlayed += 1
 
@@ -362,9 +346,6 @@ function StyngrService:RequestNextTrack(player: Player)
 
 				resolve(session)
 			end)
-		end)
-		:catch(function()
-			print("hello")
 		end)
 end
 
@@ -384,16 +365,6 @@ function StyngrService:SkipTrack(player: Player)
 
 	local statistics = self:_endTrack(player.UserId)
 	local duration = ISODurations.TranslateSecondsToDuration(statistics.duration)
-
-	if session.tracksPlayed >= playlist.trackCount then
-		self:_setSession(player.UserId, nil)
-
-		-- TODO: Report statistics!
-
-		return Promise.new(function(resolve)
-			resolve(nil)
-		end)
-	end
 
 	return self._cloudService
 		:GetToken(player)
@@ -422,6 +393,8 @@ function StyngrService:SkipTrack(player: Player)
 			return Promise.new(function(resolve)
 				local track = HttpService:JSONDecode(result.Body)
 
+				track.playlistId = session.playlistId
+
 				session.track = track
 				session.tracksPlayed += 1
 
@@ -431,18 +404,6 @@ function StyngrService:SkipTrack(player: Player)
 				resolve(session)
 			end)
 		end)
-end
-
-function StyngrService:GetNumberOfStreamsAvailable(player: Player)
-	return self:_getPlaylistsRaw(player):andThen(function(body)
-		return Promise.new(function(resolve)
-			if body["remainingNumberOfStreams"] then
-				resolve(body["remainingNumberOfStreams"])
-			else
-				resolve(0)
-			end
-		end)
-	end)
 end
 
 function StyngrService:GetAvailableRadioBundles(player: Player)

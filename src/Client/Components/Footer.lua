@@ -6,8 +6,10 @@ local Fusion = require(ReplicatedStorage.Styngr.Packages.fusion)
 local New = Fusion.New
 local Children = Fusion.Children
 local OnEvent = Fusion.OnEvent
+local Computed = Fusion.Computed
 
 local AudioService = require(StarterPlayer.StarterPlayerScripts.Styngr.AudioService)
+local State = require(ReplicatedStorage.Styngr.State)
 
 local function Footer()
 	return New("Frame")({
@@ -44,6 +46,15 @@ local function Footer()
 				BackgroundTransparency = 1,
 				LayoutOrder = 1,
 				Size = UDim2.fromScale(1, 1),
+				Visible = Computed(function()
+					local nowPlaying = State:get().nowPlaying
+
+					if not nowPlaying then
+						return false
+					end
+
+					return true
+				end),
 
 				[Children] = {
 					New("TextButton")({

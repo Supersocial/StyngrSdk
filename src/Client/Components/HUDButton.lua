@@ -41,7 +41,14 @@ local function HUDButton()
 		[OnEvent("Activated")] = function()
 			State:update(function(prev)
 				if prev.interfaceState == InterfaceStates.CLOSED then
-					prev.interfaceState = InterfaceStates.PLAYER
+					if prev.nowPlaying then
+						prev.interfaceState = InterfaceStates.PLAYER
+					else
+						local result = ReplicatedStorage.Styngr.GetPlaylists:InvokeServer()
+
+						prev.playlists = result.playlists
+						prev.interfaceState = InterfaceStates.PLAYLIST
+					end
 				else
 					prev.interfaceState = InterfaceStates.CLOSED
 				end

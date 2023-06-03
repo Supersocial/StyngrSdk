@@ -44,8 +44,6 @@ function AudioService:CanSkip()
 		return true
 	end
 
-	print(self._audio.TimePosition)
-
 	if self._audio.TimePosition < 30 then
 		return false
 	end
@@ -73,15 +71,11 @@ function AudioService:PlaySound(track)
 
 			self:_setNowPlaying(nil)
 
-			local ok, nextTrack = pcall(function()
-				return ReplicatedStorage.Styngr.RequestNextTrack:InvokeServer()
-			end)
+			local nextTrack = ReplicatedStorage.Styngr.RequestNextTrack:InvokeServer()
 
-			if not ok then
+			if not nextTrack then
 				return
 			end
-
-			nextTrack.playlistId = track.playlistId
 
 			self:PlaySound(nextTrack)
 		end)
