@@ -1,21 +1,15 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local StarterPlayer = game:GetService("StarterPlayer")
 
-local State = require(ReplicatedStorage.Styngr.State)
 local Fusion = require(ReplicatedStorage.Styngr.Packages.fusion)
 
 local New = Fusion.New
 local Children = Fusion.Children
-local Computed = Fusion.Computed
 local OnEvent = Fusion.OnEvent
 
-local InterfaceStates = require(StarterPlayer.StarterPlayerScripts.Styngr.InterfaceStates)
+local AudioService = require(StarterPlayer.StarterPlayerScripts.Styngr.AudioService)
 
 local function Footer()
-	local streamsAvailable = Computed(function()
-		return State:get().streamsAvailable .. " streams left"
-	end)
-
 	return New("Frame")({
 		Name = "Footer",
 		AnchorPoint = Vector2.new(0, 1),
@@ -38,68 +32,6 @@ local function Footer()
 				CornerRadius = UDim.new(0, 6),
 			}),
 
-			New("TextButton")({
-				Name = "Left",
-				BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-				BackgroundTransparency = 1,
-				Size = UDim2.fromScale(0.5, 1),
-
-				Text = "",
-
-				[OnEvent("Activated")] = function()
-					State:update(function(prev)
-						prev.interfaceState = InterfaceStates.STREAMS
-
-						return prev
-					end)
-				end,
-
-				[Children] = {
-					New("TextLabel")({
-						Name = "StreamsLeft",
-						FontFace = Font.new(
-							"rbxasset://fonts/families/GothamSSm.json",
-							Enum.FontWeight.Bold,
-							Enum.FontStyle.Normal
-						),
-						Text = streamsAvailable,
-						TextColor3 = Color3.fromRGB(255, 255, 255),
-						TextScaled = true,
-						TextSize = 32,
-						TextWrapped = true,
-						TextXAlignment = Enum.TextXAlignment.Left,
-						AutomaticSize = Enum.AutomaticSize.X,
-						BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-						BackgroundTransparency = 1,
-						LayoutOrder = 1,
-						Position = UDim2.fromScale(0.0211, 0.25),
-						Size = UDim2.fromScale(0.91, 1),
-					}),
-
-					New("ImageLabel")({
-						Name = "Icon",
-						Image = "rbxassetid://13172323563",
-						BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-						BackgroundTransparency = 1,
-						Size = UDim2.fromScale(1, 1),
-
-						[Children] = {
-							New("UIAspectRatioConstraint")({
-								Name = "UIAspectRatioConstraint",
-							}),
-						},
-					}),
-
-					New("UIListLayout")({
-						Name = "UIListLayout",
-						Padding = UDim.new(0, 9),
-						FillDirection = Enum.FillDirection.Horizontal,
-						SortOrder = Enum.SortOrder.LayoutOrder,
-						VerticalAlignment = Enum.VerticalAlignment.Center,
-					}),
-				},
-			}),
-
 			New("UIListLayout")({
 				Name = "UIListLayout",
 				FillDirection = Enum.FillDirection.Horizontal,
@@ -111,7 +43,7 @@ local function Footer()
 				BackgroundColor3 = Color3.fromRGB(255, 255, 255),
 				BackgroundTransparency = 1,
 				LayoutOrder = 1,
-				Size = UDim2.fromScale(0.5, 1),
+				Size = UDim2.fromScale(1, 1),
 
 				[Children] = {
 					New("TextButton")({
@@ -134,6 +66,21 @@ local function Footer()
 						BorderColor3 = Color3.fromRGB(27, 42, 53),
 						Position = UDim2.fromScale(0.879, 0),
 						Size = UDim2.fromScale(0.0024, 1),
+
+						[OnEvent("Activated")] = function()
+							if not AudioService:CanSkip() then
+								return
+							end
+
+							local track = ReplicatedStorage.Styngr.SkipTrack:InvokeServer()
+
+							if not track then
+								AudioService:Stop()
+								return
+							end
+
+							AudioService:PlaySound(track)
+						end,
 					}),
 
 					New("UIListLayout")({

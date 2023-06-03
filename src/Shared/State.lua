@@ -10,7 +10,7 @@ local State = Value({
 	interfaceState = InterfaceStates.CLOSED,
 	showButton = true,
 	playlists = {},
-	streamsAvailable = 0,
+	paused = false,
 })
 
 function State:update(callback)

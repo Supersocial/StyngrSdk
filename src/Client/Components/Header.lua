@@ -10,6 +10,7 @@ local OnEvent = Fusion.OnEvent
 local Computed = Fusion.Computed
 
 local InterfaceStates = require(StarterPlayer.StarterPlayerScripts.Styngr.InterfaceStates)
+local AudioService = require(StarterPlayer.StarterPlayerScripts.Styngr.AudioService)
 
 local function Header()
 	local title = Computed(function()
@@ -33,17 +34,13 @@ local function Header()
 	end)
 
 	local playPauseImage = Computed(function()
-		local nowPlaying = State:get().nowPlaying
+		local paused = State:get().paused
 
-		if not nowPlaying then
-			return "rbxassetid://13551674540"
-		end
-
-		if nowPlaying.paused then
+		if paused then
 			return "rbxassetid://13551674641"
+		else
+			return "rbxassetid://13171728180"
 		end
-
-		return "rbxassetid://13171794794"
 	end)
 
 	return New("Frame")({
@@ -76,7 +73,6 @@ local function Header()
 					State:update(function(prev)
 						prev.playlists = result.playlists
 						prev.interfaceState = InterfaceStates.PLAYLIST
-						prev.streamsAvailable = result.remainingNumberOfStreams
 
 						return prev
 					end)
@@ -187,22 +183,19 @@ local function Header()
 						BackgroundColor3 = Color3.fromRGB(255, 255, 255),
 						BackgroundTransparency = 1,
 						Size = UDim2.fromScale(1, 0.643),
+						Visible = Computed(function()
+							return typeof(State:get().nowPlaying) == "table"
+						end),
 
 						[OnEvent("Activated")] = function()
 							if not State:get().nowPlaying then
 								return
 							end
 
-							State:update(function(prev)
-								local nowPlaying = prev.nowPlaying
+							local paused = AudioService:PlayPause()
 
-								if nowPlaying.paused then
-									nowPlaying.instance:Resume()
-									nowPlaying.paused = false
-								else
-									nowPlaying.instance:Pause()
-									nowPlaying.paused = true
-								end
+							State:update(function(prev)
+								prev.paused = paused
 
 								return prev
 							end)

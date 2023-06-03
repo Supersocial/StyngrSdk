@@ -5,8 +5,6 @@
 ]=]
 local HttpService = game:GetService("HttpService")
 local LocalizationService = game:GetService("LocalizationService")
-local MarketplaceService = game:GetService("MarketplaceService")
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
@@ -14,12 +12,6 @@ local Promise = require(ReplicatedStorage.Styngr.Packages.promise)
 local CloudService = require(ServerScriptService.Styngr.Modules.CloudService)
 local Types = require(ServerScriptService.Styngr.Types)
 local ISODurations = require(ReplicatedStorage.Styngr.Utils.ISODurations)
-
-local Products = {
-	[1549281432] = "SUBSCRIPTION_RADIO_BUNDLE_LARGE",
-	[1549281380] = "SUBSCRIPTION_RADIO_BUNDLE_MEDIUM",
-	[1549281250] = "SUBSCRIPTION_RADIO_BUNDLE_SMALL",
-}
 
 local StyngrService = {}
 
@@ -203,7 +195,9 @@ function StyngrService:SetConfiguration(inputConfiguration: Types.StyngrServiceC
 	ReplicatedStorage.Styngr.GetPlaylists.OnServerInvoke = function(player)
 		local ok, result = self:GetPlaylists(player):await()
 
-		assert(ok, "Failed to get playlists!")
+		if not ok or not result then
+			return nil
+		end
 
 		return result
 	end
@@ -213,9 +207,9 @@ function StyngrService:SetConfiguration(inputConfiguration: Types.StyngrServiceC
 
 		local ok, session = self:StartPlaylistSession(player, playlistId):await()
 
-		print(session)
-
-		assert(ok, "Failed to start playlist session!")
+		if not ok or not session then
+			return nil
+		end
 
 		return StyngrService.BuildClientFriendlyTrack(player.UserId, session.track)
 	end
@@ -223,7 +217,9 @@ function StyngrService:SetConfiguration(inputConfiguration: Types.StyngrServiceC
 	ReplicatedStorage.Styngr.RequestNextTrack.OnServerInvoke = function(player)
 		local ok, session = self:RequestNextTrack(player):await()
 
-		assert(ok and session, "Failed to request next track!")
+		if not ok or not session then
+			return nil
+		end
 
 		return StyngrService.BuildClientFriendlyTrack(player.UserId, session.track)
 	end
@@ -231,47 +227,11 @@ function StyngrService:SetConfiguration(inputConfiguration: Types.StyngrServiceC
 	ReplicatedStorage.Styngr.SkipTrack.OnServerInvoke = function(player)
 		local ok, session = self:SkipTrack(player):await()
 
-		assert(ok and session, "Failed to request next track!")
+		if not ok or not session then
+			return nil
+		end
 
 		return StyngrService.BuildClientFriendlyTrack(player.UserId, session.track)
-	end
-
-	ReplicatedStorage.Styngr.GetNumberOfStreamsAvailable.OnServerInvoke = function(player)
-		local ok, session = self:GetNumberOfStreamsAvailable(player):await()
-
-		assert(ok, "Failed to request number of streams!")
-
-		return session
-	end
-
-	MarketplaceService.ProcessReceipt = function(receiptInfo)
-		-- Find the player who made the purchase in the server
-		local player = Players:GetPlayerByUserId(receiptInfo.PlayerId)
-		if not player then
-			-- The player probably left the game
-			-- If they come back, the callback will be called again
-			return nil
-		end
-
-		local bundleToPurchase = Products[receiptInfo.ProductId]
-
-		if not bundleToPurchase then
-			return nil
-		end
-
-		return self:CreateAndConfirmTransaction(player, bundleToPurchase):andThen(function()
-			local ok, streamsAvailable = self:GetNumberOfStreamsAvailable(player):await()
-
-			if ok then
-				ReplicatedStorage.Styngr.NewDataEvent:FireClient(player, "STREAMS_AVAILABLE", streamsAvailable)
-			end
-
-			return Enum.ProductPurchaseDecision.PurchaseGranted
-		end, function(error)
-			warn(error)
-
-			return nil
-		end)
 	end
 end
 

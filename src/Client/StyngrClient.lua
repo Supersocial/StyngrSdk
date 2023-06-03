@@ -17,16 +17,6 @@ function StyngrClient.new()
 		assert(typeof(type) == "string")
 
 		assert(data)
-
-		if type == "STREAMS_AVAILABLE" then
-			assert(typeof(data) == "number")
-
-			State:update(function(prev)
-				prev.streamsAvailable = data
-
-				return prev
-			end)
-		end
 	end)
 
 	return self
