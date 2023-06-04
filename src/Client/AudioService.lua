@@ -5,6 +5,7 @@ local AudioService = {}
 
 local Promise = require(ReplicatedStorage.Styngr.Packages.promise)
 local State = require(ReplicatedStorage.Styngr.State)
+local Line = require(script.Parent.Components.Line)
 
 local SongEvents = ReplicatedStorage.Styngr.SongEvents
 
@@ -107,6 +108,7 @@ function AudioService:PlaySound(track)
 		playlistId = track.playlistId,
 		artists = artists,
 		title = track.title,
+		timeLength = self._audio.TimeLength,
 	})
 end
 

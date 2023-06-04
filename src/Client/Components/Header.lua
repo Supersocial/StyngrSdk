@@ -8,32 +8,10 @@ local New = Fusion.New
 local Children = Fusion.Children
 local OnEvent = Fusion.OnEvent
 local Computed = Fusion.Computed
-local Tween = Fusion.Tween
 
 local InterfaceStates = require(StarterPlayer.StarterPlayerScripts.Styngr.InterfaceStates)
 local AudioService = require(StarterPlayer.StarterPlayerScripts.Styngr.AudioService)
-
-local function Line()
-	local positionTween = Tween(
-		Computed(function()
-			local nowPlaying = State:get().nowPlaying
-
-			if not nowPlaying then
-				return UDim2.fromScale(-1, 0)
-			end
-
-			return UDim2.fromScale(0, 0)
-		end),
-		TweenInfo.new(60)
-	)
-
-	return New("Frame")({
-		Name = "Line",
-		BackgroundColor3 = Color3.fromRGB(122, 247, 255),
-		Size = UDim2.fromScale(1, 1),
-		Position = positionTween,
-	})
-end
+local Line = require(StarterPlayer.StarterPlayerScripts.Styngr.Components.Line)
 
 local function Progress(props)
 	return New("CanvasGroup")({
@@ -197,7 +175,7 @@ local function Header()
 								Size = UDim2.fromScale(1, 0.357),
 							}),
 							Progress({
-								["Line"] = Line(),
+								["Line"] = Line:Render(),
 							}),
 						},
 					}),
