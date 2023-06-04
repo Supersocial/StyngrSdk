@@ -9,7 +9,8 @@ local OnEvent = Fusion.OnEvent
 local Computed = Fusion.Computed
 
 local AudioService = require(StarterPlayer.StarterPlayerScripts.Styngr.AudioService)
-local State = require(ReplicatedStorage.Styngr.State)
+local State = require(StarterPlayer.StarterPlayerScripts.Styngr.State)
+
 local InterfaceStates = require(StarterPlayer.StarterPlayerScripts.Styngr.InterfaceStates)
 
 local function Footer()

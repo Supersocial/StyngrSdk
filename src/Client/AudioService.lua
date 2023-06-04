@@ -6,7 +6,8 @@ local StarterPlayer = game:GetService("StarterPlayer")
 local AudioService = {}
 
 local Promise = require(ReplicatedStorage.Styngr.Packages.promise)
-local State = require(ReplicatedStorage.Styngr.State)
+local State = require(StarterPlayer.StarterPlayerScripts.Styngr.State)
+
 local ProgressState = require(StarterPlayer.StarterPlayerScripts.Styngr.ProgressState)
 local InterfaceStates = require(StarterPlayer.StarterPlayerScripts.Styngr.InterfaceStates)
 

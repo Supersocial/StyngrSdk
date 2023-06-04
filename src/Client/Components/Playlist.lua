@@ -2,7 +2,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local StarterPlayer = game:GetService("StarterPlayer")
 
 local Fusion = require(ReplicatedStorage.Styngr.Packages.fusion)
-local State = require(ReplicatedStorage.Styngr.State)
+local State = require(StarterPlayer.StarterPlayerScripts.Styngr.State)
+
 local AudioService = require(StarterPlayer.StarterPlayerScripts.Styngr.AudioService)
 
 local New = Fusion.New

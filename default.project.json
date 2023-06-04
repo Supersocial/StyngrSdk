@@ -8,9 +8,9 @@
 				"$className": "Folder",
 				"$path": "src/Shared",
 				"Packages": {
-						"$className": "Folder",
-						"$path": "Packages"
-				},				
+					"$className": "Folder",
+					"$path": "Packages"
+				},
 				"DevPackages": {
 					"$className": "Folder",
 					"$path": "DevPackages"
@@ -30,6 +30,10 @@
 				"SkipTrack": {
 					"$className": "RemoteFunction"
 				}
+			},
+			"Local": {
+				"$className": "Folder",
+				"$path": "src/local/Shared"
 			}
 		},
 		"ServerScriptService": {
@@ -37,6 +41,10 @@
 			"Styngr": {
 				"$className": "Folder",
 				"$path": "src/Server"
+			},
+			"Local": {
+				"$className": "Folder",
+				"$path": "src/local/Server"
 			}
 		},
 		"StarterPlayer": {
@@ -46,6 +54,10 @@
 				"Styngr": {
 					"$className": "Folder",
 					"$path": "src/Client"
+				},
+				"Local": {
+					"$className": "Folder",
+					"$path": "src/local/Client"
 				}
 			}
 		}

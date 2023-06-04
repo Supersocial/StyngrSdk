@@ -1,11 +1,11 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local StarterPlayer = game:GetService("StarterPlayer")
+
 local InterfaceService = {}
 
-InterfaceService.__index = InterfaceService
+local State = require(StarterPlayer.StarterPlayerScripts.Styngr.State)
 
-local State = require(ReplicatedStorage.Styngr.State)
 local Fusion = require(ReplicatedStorage.Styngr.Packages.fusion)
 
 local New = Fusion.New
@@ -14,7 +14,7 @@ local Computed = Fusion.Computed
 
 local InterfaceStates = require(StarterPlayer.StarterPlayerScripts.Styngr.InterfaceStates)
 
-local Components = script.Parent.Components
+local Components = StarterPlayer.StarterPlayerScripts.Styngr.Components
 
 local HUDButton = require(Components.HUDButton)
 local Player = require(Components.Player)
@@ -132,7 +132,7 @@ function InterfaceService:Init()
 		}
 	end)
 
-	self._ui = New("ScreenGui")({
+	New("ScreenGui")({
 		Name = "StyngrUI",
 		Parent = Players.LocalPlayer:FindFirstChildOfClass("PlayerGui"),
 
@@ -140,10 +140,4 @@ function InterfaceService:Init()
 	})
 end
 
-function InterfaceService.new()
-	local self = setmetatable({}, InterfaceService)
-
-	return self
-end
-
-return InterfaceService.new()
+return InterfaceService

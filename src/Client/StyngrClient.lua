@@ -1,20 +1,10 @@
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local StarterPlayer = game:GetService("StarterPlayer")
 local StyngrClient = {}
 
-StyngrClient.__index = StyngrClient
+local State = require(StarterPlayer.StarterPlayerScripts.Styngr.State)
 
-local State = require(ReplicatedStorage.Styngr.State)
-
-local InterfaceService = require(script.Parent.InterfaceService)
-local InterfaceStates = require(script.Parent.InterfaceStates)
-
-function StyngrClient.new()
-	local self = setmetatable({}, StyngrClient)
-
-	self._interfaceService = InterfaceService:Init()
-
-	return self
-end
+local InterfaceService = require(StarterPlayer.StarterPlayerScripts.Styngr.InterfaceService)
+local InterfaceStates = require(StarterPlayer.StarterPlayerScripts.Styngr.InterfaceStates)
 
 function StyngrClient:Toggle()
 	local closed = State:get().interfaceState == InterfaceStates.CLOSED
@@ -42,4 +32,8 @@ function StyngrClient:SetVisible(state)
 	end)
 end
 
-return StyngrClient.new()
+function StyngrClient:Init()
+	InterfaceService:Init()
+end
+
+return StyngrClient
