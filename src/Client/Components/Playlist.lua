@@ -92,10 +92,9 @@ local function PlaylistItem(props)
 				VerticalAlignment = Enum.VerticalAlignment.Center,
 			}),
 
-			New("ImageButton")({
+			New("TextButton")({
 				Name = "PlayButton",
-				Image = "rbxassetid://13548540206",
-				ScaleType = Enum.ScaleType.Fit,
+				Text = "",
 				AnchorPoint = Vector2.new(1, 0),
 				BackgroundColor3 = Color3.fromRGB(255, 255, 255),
 				Size = UDim2.fromScale(0.086, 1),
@@ -110,6 +109,22 @@ local function PlaylistItem(props)
 					New("UICorner")({
 						Name = "UICorner",
 						CornerRadius = UDim.new(1, 0),
+					}),
+
+					New("ImageLabel")({
+						Name = "ArrowIcon",
+						AnchorPoint = Vector2.new(0.5, 0.5),
+						Position = UDim2.fromScale(0.5, 0.5),
+						Size = UDim2.fromScale(1, 0.5),
+						BackgroundTransparency = 1,
+						Image = "rbxassetid://13548540206",
+
+						[Children] = {
+
+							New("UIAspectRatioConstraint")({
+								Name = "UIAspectRatioConstraint",
+							}),
+						},
 					}),
 				},
 			}),
