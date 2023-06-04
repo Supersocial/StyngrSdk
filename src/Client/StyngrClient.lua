@@ -13,12 +13,6 @@ function StyngrClient.new()
 
 	self._interfaceService = InterfaceService:Init()
 
-	ReplicatedStorage.Styngr.NewDataEvent.OnClientEvent:Connect(function(type, data)
-		assert(typeof(type) == "string")
-
-		assert(data)
-	end)
-
 	return self
 end
 
