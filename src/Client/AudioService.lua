@@ -8,6 +8,7 @@ local AudioService = {}
 local Promise = require(ReplicatedStorage.Styngr.Packages.promise)
 local State = require(ReplicatedStorage.Styngr.State)
 local ProgressState = require(StarterPlayer.StarterPlayerScripts.Styngr.ProgressState)
+local InterfaceStates = require(StarterPlayer.StarterPlayerScripts.Styngr.InterfaceStates)
 
 local SongEvents = ReplicatedStorage.Styngr.SongEvents
 
@@ -77,6 +78,13 @@ function AudioService:PlaySound(track)
 			local nextTrack = ReplicatedStorage.Styngr.RequestNextTrack:InvokeServer()
 
 			if not nextTrack then
+				State:update(function(prev)
+					if prev.interfaceState == InterfaceStates.PLAYER then
+						prev.interfaceState = InterfaceStates.PLAYLIST
+					end
+
+					return prev
+				end)
 				return
 			end
 

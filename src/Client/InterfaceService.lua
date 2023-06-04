@@ -63,8 +63,8 @@ local function StyngrFrame()
 	end)
 
 	return New("CanvasGroup")({
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.fromScale(0.5, 0.5),
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.fromScale(0.5, 0.875),
 
 		Size = Computed(function()
 			local currentWindow = State:get().interfaceState

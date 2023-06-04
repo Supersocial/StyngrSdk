@@ -10,6 +10,7 @@ local Computed = Fusion.Computed
 
 local AudioService = require(StarterPlayer.StarterPlayerScripts.Styngr.AudioService)
 local State = require(ReplicatedStorage.Styngr.State)
+local InterfaceStates = require(StarterPlayer.StarterPlayerScripts.Styngr.InterfaceStates)
 
 local function Footer()
 	return New("Frame")({
@@ -87,6 +88,13 @@ local function Footer()
 
 							if not track then
 								AudioService:Stop()
+
+								State:update(function(prev)
+									prev.interfaceState = InterfaceStates.PLAYLIST
+
+									return prev
+								end)
+
 								return
 							end
 
