@@ -1,9 +1,10 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local StarterPlayer = game:GetService("StarterPlayer")
+
 local InterfaceService = {}
 
-InterfaceService.__index = InterfaceService
+local State = require(StarterPlayer.StarterPlayerScripts.Styngr.State)
 
 local Fusion = require(ReplicatedStorage.Styngr.Packages.fusion)
 
@@ -13,17 +14,15 @@ local Computed = Fusion.Computed
 
 local InterfaceStates = require(StarterPlayer.StarterPlayerScripts.Styngr.InterfaceStates)
 
-local Components = script.Parent.Components
+local Components = StarterPlayer.StarterPlayerScripts.Styngr.Components
 
 local HUDButton = require(Components.HUDButton)
 local Player = require(Components.Player)
 local Playlist = require(Components.Playlist)
 
-local function StyngrFrame(props)
+local function StyngrFrame()
 	local children = Computed(function()
-		local currentWindow = props.State:get()
-
-		print(currentWindow)
+		local currentWindow = State:get().interfaceState
 
 		if currentWindow == InterfaceStates.CLOSED then
 			return {}
@@ -31,7 +30,7 @@ local function StyngrFrame(props)
 
 		if currentWindow == InterfaceStates.PLAYER then
 			return {
-				Player({ ["State"] = props.State }),
+				Player(),
 				New("UICorner")({
 					CornerRadius = UDim.new(0.149, 0),
 				}),
@@ -49,7 +48,7 @@ local function StyngrFrame(props)
 
 		if currentWindow == InterfaceStates.PLAYLIST then
 			return {
-				Playlist({}),
+				Playlist(),
 				New("UISizeConstraint")({
 					MinSize = Vector2.new(200, 170),
 				}),
@@ -64,11 +63,11 @@ local function StyngrFrame(props)
 	end)
 
 	return New("CanvasGroup")({
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.fromScale(0.5, 0.5),
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.fromScale(0.5, 0.875),
 
 		Size = Computed(function()
-			local currentWindow = props.State:get()
+			local currentWindow = State:get().interfaceState
 
 			if currentWindow == InterfaceStates.PLAYER then
 				return UDim2.fromScale(0.313, 0.186)
@@ -78,14 +77,10 @@ local function StyngrFrame(props)
 				return UDim2.fromScale(0.313, 0.473)
 			end
 
-			if currentWindow == InterfaceStates.STREAMS then
-				return UDim2.fromScale(0.313, 0.186)
-			end
-
 			return UDim2.fromScale(0, 0)
 		end),
 		BackgroundColor3 = Computed(function()
-			local currentWindow = props.State:get()
+			local currentWindow = State:get().interfaceState
 
 			if currentWindow == InterfaceStates.PLAYER then
 				return Color3.fromRGB(34, 34, 34)
@@ -95,14 +90,10 @@ local function StyngrFrame(props)
 				return Color3.fromRGB(17, 17, 17)
 			end
 
-			if currentWindow == InterfaceStates.STREAMS then
-				return Color3.fromRGB(34, 34, 34)
-			end
-
 			return Color3.new()
 		end),
 		BackgroundTransparency = Computed(function()
-			local currentWindow = props.State:get()
+			local currentWindow = State:get().interfaceState
 
 			if currentWindow == InterfaceStates.PLAYER then
 				return 0
@@ -112,15 +103,11 @@ local function StyngrFrame(props)
 				return 0.1
 			end
 
-			if currentWindow == InterfaceStates.STREAMS then
-				return 0
-			end
-
 			return 1
 		end),
 
 		Visible = Computed(function()
-			if props.State:get() == InterfaceStates.CLOSED then
+			if State:get().interfaceState == InterfaceStates.CLOSED then
 				return false
 			end
 
@@ -131,21 +118,21 @@ local function StyngrFrame(props)
 	})
 end
 
-function InterfaceService:Init(state, showButton)
+function InterfaceService:Init()
 	local children = Computed(function()
-		if showButton:get() then
+		if State:get().showButton then
 			return {
-				HUDButton({ ["State"] = state }),
-				StyngrFrame({ ["State"] = state }),
+				HUDButton(),
+				StyngrFrame(),
 			}
 		end
 
 		return {
-			StyngrFrame({ ["State"] = state }),
+			StyngrFrame(),
 		}
 	end)
 
-	self._ui = New("ScreenGui")({
+	New("ScreenGui")({
 		Name = "StyngrUI",
 		Parent = Players.LocalPlayer:FindFirstChildOfClass("PlayerGui"),
 
@@ -153,10 +140,4 @@ function InterfaceService:Init(state, showButton)
 	})
 end
 
-function InterfaceService.new()
-	local self = setmetatable({}, InterfaceService)
-
-	return self
-end
-
-return InterfaceService.new()
+return InterfaceService

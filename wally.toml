@@ -6,6 +6,7 @@ realm = "shared"
 
 [dependencies]
 promise = "evaera/promise@4.0.0" 
+fusion = "elttob/fusion@0.2.0"
 
 [dev-dependencies]
 testez = "roblox/testez@0.4.1"

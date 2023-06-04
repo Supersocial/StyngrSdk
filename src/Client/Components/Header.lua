@@ -1,14 +1,67 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local StarterPlayer = game:GetService("StarterPlayer")
+
+local State = require(StarterPlayer.StarterPlayerScripts.Styngr.State)
+
 local Fusion = require(ReplicatedStorage.Styngr.Packages.fusion)
 
 local New = Fusion.New
 local Children = Fusion.Children
 local OnEvent = Fusion.OnEvent
+local Computed = Fusion.Computed
 
 local InterfaceStates = require(StarterPlayer.StarterPlayerScripts.Styngr.InterfaceStates)
+local AudioService = require(StarterPlayer.StarterPlayerScripts.Styngr.AudioService)
+local Line = require(StarterPlayer.StarterPlayerScripts.Styngr.Components.Line)
 
-local function Header(props)
+local function Progress(props)
+	return New("CanvasGroup")({
+		Name = "Progress",
+		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+		BackgroundTransparency = 0.7,
+		Size = UDim2.fromScale(1, 0.143),
+
+		[Children] = {
+			New("UICorner")({
+				CornerRadius = UDim.new(0.5, 0),
+			}),
+
+			props.Line,
+		},
+	})
+end
+
+local function Header()
+	local title = Computed(function()
+		local nowPlaying = State:get().nowPlaying
+
+		if not nowPlaying then
+			return ""
+		end
+
+		return nowPlaying.title
+	end)
+
+	local artists = Computed(function()
+		local nowPlaying = State:get().nowPlaying
+
+		if not nowPlaying then
+			return ""
+		end
+
+		return nowPlaying.artists
+	end)
+
+	local playPauseImage = Computed(function()
+		local paused = State:get().paused
+
+		if paused then
+			return "rbxassetid://13551674641"
+		else
+			return "rbxassetid://13171728180"
+		end
+	end)
+
 	return New("Frame")({
 		Name = "Header",
 		AnchorPoint = Vector2.new(0, 0),
@@ -34,7 +87,14 @@ local function Header(props)
 				Size = UDim2.fromScale(1, 1),
 
 				[OnEvent("Activated")] = function()
-					props.State:set(InterfaceStates.PLAYLIST)
+					local result = ReplicatedStorage.Styngr.GetPlaylists:InvokeServer()
+
+					State:update(function(prev)
+						prev.playlists = result.playlists
+						prev.interfaceState = InterfaceStates.PLAYLIST
+
+						return prev
+					end)
 				end,
 
 				[Children] = {
@@ -94,7 +154,7 @@ local function Header(props)
 									Enum.FontWeight.Regular,
 									Enum.FontStyle.Normal
 								),
-								Text = "Elton John's Greatest Hits",
+								Text = artists,
 								TextColor3 = Color3.fromRGB(255, 255, 255),
 								TextScaled = true,
 								TextYAlignment = Enum.TextYAlignment.Top,
@@ -108,39 +168,41 @@ local function Header(props)
 									Enum.FontWeight.Bold,
 									Enum.FontStyle.Normal
 								),
-								Text = "I'm Still Standing",
+								Text = title,
 								TextColor3 = Color3.fromRGB(255, 255, 255),
 								TextScaled = true,
 								TextYAlignment = Enum.TextYAlignment.Top,
 								BackgroundTransparency = 1,
 								Size = UDim2.fromScale(1, 0.357),
 							}),
-							New("CanvasGroup")({
-								Name = "Progress",
-								BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-								BackgroundTransparency = 0.7,
-								Size = UDim2.fromScale(1, 0.143),
-
-								[Children] = {
-									New("UICorner")({
-										CornerRadius = UDim.new(0.5, 0),
-									}),
-
-									New("Frame")({
-										Name = "Line",
-										BackgroundColor3 = Color3.fromRGB(122, 247, 255),
-										Size = UDim2.fromScale(0.3, 1),
-									}),
-								},
+							Progress({
+								["Line"] = Line:Render(),
 							}),
 						},
 					}),
 					New("ImageButton")({
 						Name = "PlayPause",
-						Image = "rbxassetid://13171794794",
+						Image = playPauseImage,
 						BackgroundColor3 = Color3.fromRGB(255, 255, 255),
 						BackgroundTransparency = 1,
 						Size = UDim2.fromScale(1, 0.643),
+						Visible = Computed(function()
+							return typeof(State:get().nowPlaying) == "table"
+						end),
+
+						[OnEvent("Activated")] = function()
+							if not State:get().nowPlaying then
+								return
+							end
+
+							local paused = AudioService:PlayPause()
+
+							State:update(function(prev)
+								prev.paused = paused
+
+								return prev
+							end)
+						end,
 
 						[Children] = {
 							New("UIAspectRatioConstraint")({

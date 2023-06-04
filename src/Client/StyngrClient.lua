@@ -1,38 +1,39 @@
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local StarterPlayer = game:GetService("StarterPlayer")
 local StyngrClient = {}
 
-StyngrClient.__index = StyngrClient
+local State = require(StarterPlayer.StarterPlayerScripts.Styngr.State)
 
-local Fusion = require(ReplicatedStorage.Styngr.Packages.fusion)
-
-local Value = Fusion.Value
-
-local InterfaceService = require(script.Parent.InterfaceService)
-local InterfaceStates = require(script.Parent.InterfaceStates)
-
-function StyngrClient.new()
-	local self = setmetatable({}, StyngrClient)
-
-	self._state = Value(InterfaceStates.CLOSED)
-	self._showButton = Value(true)
-	self._interfaceService = InterfaceService:Init(self._state, self._showButton)
-
-	return self
-end
+local InterfaceService = require(StarterPlayer.StarterPlayerScripts.Styngr.InterfaceService)
+local InterfaceStates = require(StarterPlayer.StarterPlayerScripts.Styngr.InterfaceStates)
 
 function StyngrClient:Toggle()
-	local closed = self._state:get() == InterfaceStates.CLOSED
+	local closed = State:get().interfaceState == InterfaceStates.CLOSED
 
 	if closed then
-		-- TODO: Add conditional to open X depending on Y, right now we always open the player though
-		self._state:set(InterfaceStates.PLAYER)
+		State:update(function(prev)
+			prev.interfaceState = InterfaceStates.PLAYER
+
+			return prev
+		end)
 	else
-		self._state:set(InterfaceStates.CLOSED)
+		State:update(function(prev)
+			prev.interfaceState = InterfaceStates.CLOSED
+
+			return prev
+		end)
 	end
 end
 
 function StyngrClient:SetVisible(state)
-	self._showButton:set(state)
+	State:update(function(prev)
+		prev.showButton = state
+
+		return prev
+	end)
 end
 
-return StyngrClient.new()
+function StyngrClient:Init()
+	InterfaceService:Init()
+end
+
+return StyngrClient

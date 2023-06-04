@@ -4,6 +4,7 @@
 	Core service for all server side SDK methods
 ]=]
 local HttpService = game:GetService("HttpService")
+local LocalizationService = game:GetService("LocalizationService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
@@ -14,15 +15,33 @@ local ISODurations = require(ReplicatedStorage.Styngr.Utils.ISODurations)
 
 local StyngrService = {}
 
-function StyngrService.BuildClientFriendlyTrack(userId, track, robloxTrack)
-	local encryptionKey = game:GetService("NetworkServer"):EncryptStringForPlayerId(robloxTrack.key, userId)
+function StyngrService.BuildClientFriendlyTrack(userId, track)
+	assert(
+		track
+			and typeof(track["customMetadata"]) == "table"
+			and typeof(track["title"]) == "string"
+			and typeof(track["artistNames"]) == "table"
+			and typeof(track["isLiked"]) == "boolean"
+			and typeof(track["playlistId"] == "string"),
+		"Please ensure the passed in track is valid and contains all necessary values."
+	)
+
+	local customMetadata = track.customMetadata
+
+	assert(
+		typeof(customMetadata["key"]) == "string" and typeof(customMetadata["id"]) == "string",
+		"Track's custom metadata does not contain necessary information."
+	)
+
+	local encryptionKey = game:GetService("NetworkServer"):EncryptStringForPlayerId(customMetadata.key, userId)
 
 	return {
 		title = track.title,
 		artistNames = track.artistNames,
 		isLiked = track.isLiked,
-		assetId = robloxTrack.id,
+		assetId = customMetadata.id,
 		encryptionKey = encryptionKey,
+		playlistId = track.playlistId,
 	}
 end
 
@@ -106,6 +125,25 @@ function StyngrService:_clientTrackEvent(userId: number, event)
 	self._tracking[userId] = statistics
 end
 
+function StyngrService:_getPlaylistsRaw(player: Player)
+	return self._cloudService
+		:GetToken(player)
+		:andThen(function(token)
+			return self._cloudService:Call(token, "/v2/sdk/integration/playlists", "GET")
+		end)
+		:andThen(function(result)
+			return Promise.new(function(resolve, reject)
+				local body = HttpService:JSONDecode(result.Body)
+
+				if body["playlists"] then
+					resolve(body)
+				else
+					reject()
+				end
+			end)
+		end)
+end
+
 --[=[
 	For setting up the SDK with your API credentials
 
@@ -127,7 +165,7 @@ function StyngrService:SetConfiguration(inputConfiguration: Types.StyngrServiceC
 			"Please specify a configuration and ensure all values are correct!"
 		)
 	else
-		inputConfiguration.apiServer = "https://stg.api.styngr.com/api/v1/sdk/"
+		inputConfiguration.apiServer = "https://stg.api.styngr.com/api"
 	end
 
 	if self._connections then
@@ -152,9 +190,11 @@ function StyngrService:SetConfiguration(inputConfiguration: Types.StyngrServiceC
 	table.insert(self._connections, SongEventsConnection)
 
 	ReplicatedStorage.Styngr.GetPlaylists.OnServerInvoke = function(player)
-		local ok, result = self:GetPlaylists(player.UserId):await()
+		local ok, result = self:GetPlaylists(player):await()
 
-		assert(ok, "Failed to get playlists!")
+		if not ok or not result then
+			return nil
+		end
 
 		return result
 	end
@@ -162,40 +202,35 @@ function StyngrService:SetConfiguration(inputConfiguration: Types.StyngrServiceC
 	ReplicatedStorage.Styngr.StartPlaylistSession.OnServerInvoke = function(player, playlistId)
 		assert(typeof(playlistId) == "string")
 
-		local ok, session = self:StartPlaylistSession(player.UserId, playlistId):await()
+		local ok, session = self:StartPlaylistSession(player, playlistId):await()
 
-		assert(ok, "Failed to start playlist session!")
+		if not ok or not session then
+			return nil
+		end
 
-		local track = session.track
-		local robloxTrack = self:TEMPGetRobloxTrack(track.audioAssetId)
+		session.track.playlistId = playlistId
 
-		return StyngrService.BuildClientFriendlyTrack(player.UserId, track, robloxTrack)
+		return StyngrService.BuildClientFriendlyTrack(player.UserId, session.track)
 	end
 
 	ReplicatedStorage.Styngr.RequestNextTrack.OnServerInvoke = function(player)
-		local ok, session = self:RequestNextTrack(player.UserId):await()
+		local ok, session = self:RequestNextTrack(player):await()
 
-		print(session)
+		if not ok or not session then
+			return nil
+		end
 
-		assert(ok and session, "Failed to request next track!")
-
-		local track = session.track
-		local robloxTrack = self:TEMPGetRobloxTrack(track.audioAssetId)
-
-		return StyngrService.BuildClientFriendlyTrack(player.UserId, track, robloxTrack)
+		return StyngrService.BuildClientFriendlyTrack(player.UserId, session.track)
 	end
 
 	ReplicatedStorage.Styngr.SkipTrack.OnServerInvoke = function(player)
-		local ok, session = self:SkipTrack(player.UserId):await()
+		local ok, session = self:SkipTrack(player):await()
 
-		print(session)
+		if not ok or not session then
+			return nil
+		end
 
-		assert(ok and session, "Failed to request next track!")
-
-		local track = session.track
-		local robloxTrack = self:TEMPGetRobloxTrack(track.audioAssetId)
-
-		return StyngrService.BuildClientFriendlyTrack(player.UserId, track, robloxTrack)
+		return StyngrService.BuildClientFriendlyTrack(player.UserId, session.track)
 	end
 end
 
@@ -204,59 +239,45 @@ end
 	@param userId number -- The player you're requesting on behalf of
 	@return Promise<{{ description: string?, duration: number, id: string, title: string?, trackCount: number }}>
 ]=]
-function StyngrService:GetPlaylists(userId: number)
+function StyngrService:GetPlaylists(player: Player)
 	assert(
 		self._cloudService,
 		"Please initialize StyngrService using StyngrService.SetConfiguration() before calling this method!"
 	)
 
-	return self._cloudService
-		:GetToken(userId)
-		:andThen(function(token)
-			return self._cloudService:Call(token, "integration/playlists", "GET")
-		end)
-		:andThen(function(result)
-			return Promise.new(function(resolve, reject)
-				local body = HttpService:JSONDecode(result.Body)
+	local _ = self:CreateAndConfirmTransaction(player, "SUBSCRIPTION_RADIO_BUNDLE_FREE"):await()
 
-				if body["playlists"] then
-					local playlistsById = {}
+	return self:_getPlaylistsRaw(player)
+		:andThen(function(body)
+			return Promise.new(function(resolve)
+				local playlistsById = {}
 
-					for _, playlist in body["playlists"] do
-						playlistsById[playlist.id] = playlist
-					end
-
-					self:_setPlayersPlaylists(userId, playlistsById)
-
-					resolve(body["playlists"])
-				else
-					reject()
+				for _, playlist in body["playlists"] do
+					playlistsById[playlist.id] = playlist
 				end
+
+				self:_setPlayersPlaylists(player.UserId, playlistsById)
+
+				resolve(body)
 			end)
+		end)
+		:catch(function(error)
+			warn(error)
 		end)
 end
 
-function StyngrService:StartPlaylistSession(userId: number, playlistId: string)
+function StyngrService:StartPlaylistSession(player: Player, playlistId: string)
 	assert(
 		self._cloudService,
 		"Please initialize StyngrService using StyngrService.SetConfiguration() before calling this method!"
 	)
 
-	local existingSession = self:_getSession(userId)
-
-	if existingSession and existingSession.playlistId == playlistId then
-		-- TODO: This is potentially bad, let's think through resuming AND switching between playlists (maybe we need some state to determine if a playlist is currently playing?)
-		return Promise.new(function(_, reject)
-			reject("An existing session for this playlist is already in action!")
-		end)
-	end
-
 	return self._cloudService
-		:GetToken(userId)
+		:GetToken(player)
 		:andThen(function(token)
 			return self._cloudService:Call(
 				token,
-				"integration/playlists/" .. playlistId .. "/start?trackFormat=AAC&createAssetUrl=false",
+				"/v2/sdk/integration/playlists/" .. playlistId .. "/start?trackFormat=AAC&createAssetUrl=false",
 				"POST"
 			)
 		end)
@@ -267,81 +288,40 @@ function StyngrService:StartPlaylistSession(userId: number, playlistId: string)
 				session.playlistId = playlistId
 				session.tracksPlayed = 1
 
-				self:_startTrack(userId)
-				self:_setSession(userId, session)
+				self:_startTrack(player.UserId)
+				self:_setSession(player.UserId, session)
 
 				resolve(session)
 			end)
 		end)
+		:catch(function(error)
+			warn(error)
+		end)
 end
 
---[[
-	TEMPORARY METHOD WHILE API PARTNER IS WORKING ON THEIR SOLUTION
-]]
-function StyngrService:TEMPGetRobloxTrack(mediaNetId: number)
-	local mediaNetIdsToRoblox = {
-		[774981] = {
-			id = "rbxassetid://11090605228",
-			key = "3471684a805fe3a498153616285cb5f1c368d039a89b8be2395b2366083b8d79",
-		},
-		[598680043] = {
-			id = "rbxassetid://11090606768",
-			key = "ccc97c202ebd435557b1594e98e5fc37b6ba7c7ed8dca31ef30c33800e3cde57",
-		},
-		[550236843] = {
-			id = "rbxassetid://11090610497",
-			key = "c617300ebd19018b311901e06934757c37ef6f2df35b1eba79d85564ccb33090",
-		},
-		[93210735] = {
-			id = "rbxassetid://11090608083",
-			key = "c9fb002e055d78bae8db171d1b685c78319f75692810e968ad8cacada8ffbd2a",
-		},
-		[778843] = {
-			id = "rbxassetid://11090609300",
-			key = "6d582087e7cff668be72919c12f846d716c353f474a04d01d62de612a23759a5",
-		},
-	}
-
-	local robloxTrack = mediaNetIdsToRoblox[mediaNetId]
-
-	assert(robloxTrack, "Failed to map external track with internal table")
-
-	return robloxTrack
-end
-
-function StyngrService:RequestNextTrack(userId: number)
+function StyngrService:RequestNextTrack(player: Player)
 	assert(
 		self._cloudService,
 		"Please initialize StyngrService using StyngrService.SetConfiguration() before calling this method!"
 	)
 
-	local session = self:_getSession(userId)
+	local session = self:_getSession(player.UserId)
 
-	assert(session, "No session found for user " .. userId .. "!")
+	assert(session, "No session found for user " .. player.UserId .. "!")
 
-	local playlist = self:_getPlayersPlaylists(userId)[session.playlistId]
+	local playlist = self:_getPlayersPlaylists(player.UserId)[session.playlistId]
 
 	assert(playlist, "This playlist does not exist for the user!")
 
-	local statistics = self:_endTrack(userId)
+	local statistics = self:_endTrack(player.UserId)
 	local duration = ISODurations.TranslateSecondsToDuration(statistics.duration)
 
-	if session.tracksPlayed >= playlist.trackCount then
-		self:_setSession(userId, nil)
-
-		-- TODO: Report statistics!
-
-		return Promise.new(function(resolve)
-			resolve(nil)
-		end)
-	end
-
 	return self._cloudService
-		:GetToken(userId)
+		:GetToken(player)
 		:andThen(function(token)
 			return self._cloudService:Call(
 				token,
-				"integration/playlists/" .. session.playlistId .. "/next?createAssetUrl=false",
+				"/v2/sdk/integration/playlists/" .. session.playlistId .. "/next?createAssetUrl=false",
 				"POST",
 				{
 					sessionId = session.sessionId,
@@ -363,53 +343,42 @@ function StyngrService:RequestNextTrack(userId: number)
 			return Promise.new(function(resolve)
 				local track = HttpService:JSONDecode(result.Body)
 
+				track.playlistId = session.playlistId
+
 				session.track = track
 				session.tracksPlayed += 1
 
-				self:_startTrack(userId)
-				self:_setSession(userId, session)
+				self:_startTrack(player.UserId)
+				self:_setSession(player.UserId, session)
 
 				resolve(session)
 			end)
 		end)
-		:catch(function()
-			print("hello")
-		end)
 end
 
-function StyngrService:SkipTrack(userId: number)
+function StyngrService:SkipTrack(player: Player)
 	assert(
 		self._cloudService,
 		"Please initialize StyngrService using StyngrService.SetConfiguration() before calling this method!"
 	)
 
-	local session = self:_getSession(userId)
+	local session = self:_getSession(player.UserId)
 
-	assert(session, "No session found for user " .. userId .. "!")
+	assert(session, "No session found for user " .. player.UserId .. "!")
 
-	local playlist = self:_getPlayersPlaylists(userId)[session.playlistId]
+	local playlist = self:_getPlayersPlaylists(player.UserId)[session.playlistId]
 
 	assert(playlist, "This playlist does not exist for the user!")
 
-	local statistics = self:_endTrack(userId)
+	local statistics = self:_endTrack(player.UserId)
 	local duration = ISODurations.TranslateSecondsToDuration(statistics.duration)
 
-	if session.tracksPlayed >= playlist.trackCount then
-		self:_setSession(userId, nil)
-
-		-- TODO: Report statistics!
-
-		return Promise.new(function(resolve)
-			resolve(nil)
-		end)
-	end
-
 	return self._cloudService
-		:GetToken(userId)
+		:GetToken(player)
 		:andThen(function(token)
 			return self._cloudService:Call(
 				token,
-				"integration/playlists/" .. session.playlistId .. "/skip?createAssetUrl=false",
+				"/v2/sdk/integration/playlists/" .. session.playlistId .. "/skip?createAssetUrl=false",
 				"POST",
 				{
 					sessionId = session.sessionId,
@@ -431,15 +400,88 @@ function StyngrService:SkipTrack(userId: number)
 			return Promise.new(function(resolve)
 				local track = HttpService:JSONDecode(result.Body)
 
+				track.playlistId = session.playlistId
+
 				session.track = track
 				session.tracksPlayed += 1
 
-				self:_startTrack(userId)
-				self:_setSession(userId, session)
+				self:_startTrack(player.UserId)
+				self:_setSession(player.UserId, session)
 
 				resolve(session)
 			end)
 		end)
+end
+
+function StyngrService:GetAvailableRadioBundles(player: Player)
+	return self._cloudService
+		:GetToken(player)
+		:andThen(function(token)
+			return self._cloudService:Call(
+				token,
+				"/v1/sdk/radio/" .. self._configuration.appId .. "/bundle/available",
+				"GET"
+			)
+		end)
+		:andThen(function(result)
+			return Promise.new(function(resolve, reject)
+				local parsedBody = HttpService:JSONDecode(result.Body)
+
+				if parsedBody["availableRadioBundles"] then
+					resolve(parsedBody["availableRadioBundles"])
+					return
+				end
+
+				reject("Invalid response, no availableRadioBundles present in response.")
+			end)
+		end)
+end
+
+function StyngrService:_createTransaction(token: string, bundleToPurchase: string)
+	return self._cloudService
+		:Call(token, "/v1/sdk/radio/" .. self._cloudService._configuration.appId .. "/bundle/purchase", "POST", {
+			["bundleToPurchase"] = bundleToPurchase,
+		})
+		:andThen(function(rawPurchaseResponse)
+			return Promise.new(function(resolve, reject)
+				local purchaseBody = HttpService:JSONDecode(rawPurchaseResponse.Body)
+
+				if purchaseBody["transactionId"] then
+					resolve(purchaseBody["transactionId"])
+				else
+					reject("No transactionId present on purchase body response")
+				end
+			end)
+		end)
+end
+
+function StyngrService:_confirmTransaction(player: Player, transactionId: string)
+	return Promise.new(function(resolve)
+		resolve(LocalizationService:GetCountryRegionForPlayerAsync(player))
+	end):andThen(function(countryRegion)
+		return self._cloudService:CallAsApi("/v1/sdk/payments/confirm", "POST", {
+			trxId = transactionId,
+			appId = self._cloudService._configuration.appId,
+			billingType = "BUNDLE",
+			payType = "NP",
+			subscriptionId = "",
+			userIp = "",
+			billingCountry = countryRegion,
+		})
+	end)
+end
+
+function StyngrService:CreateAndConfirmTransaction(player: Player, bundleToPurchase: string)
+	assert(
+		self._cloudService,
+		"Please initialize StyngrService using StyngrService.SetConfiguration() before calling this method!"
+	)
+
+	return self._cloudService:GetToken(player):andThen(function(token)
+		return self:_createTransaction(token, bundleToPurchase):andThen(function(transactionId)
+			return self:_confirmTransaction(player, transactionId)
+		end)
+	end)
 end
 
 return StyngrService

@@ -3,6 +3,11 @@
 registry = "test"
 
 [[package]]
+name = "elttob/fusion"
+version = "0.2.0"
+dependencies = []
+
+[[package]]
 name = "evaera/promise"
 version = "4.0.0"
 dependencies = []
@@ -10,7 +15,7 @@ dependencies = []
 [[package]]
 name = "oscar/styngrsdk"
 version = "0.1.0"
-dependencies = [["promise", "evaera/promise@4.0.0"]]
+dependencies = [["fusion", "elttob/fusion@0.2.0"], ["promise", "evaera/promise@4.0.0"]]
 
 [[package]]
 name = "roblox/testez"
