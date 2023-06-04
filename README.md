@@ -12,7 +12,7 @@ The installation and setup of the Styngr SDK is meant to be simple and straightf
 
 ### Rojo Users
 
-1. Download the latest .zip release here
+1. Download the latest .zip release [here](https://github.com/Supersocial/StyngrSdk/releases/latest)
 
 2. Unzip the file, and move the contents of the folders to their specified location
 
@@ -20,7 +20,7 @@ a. I.e contents of `ServerScriptService` folder are placed in `ServerScriptServi
 
 ### Vanilla Studio Users
 
-1. Download the latest release here
+1. Download the latest release [here](https://github.com/Supersocial/StyngrSdk/releases/latest)
 
 2. Drag the .rbxl into Roblox Studio
 
