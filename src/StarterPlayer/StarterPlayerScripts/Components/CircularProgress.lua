@@ -12,14 +12,11 @@ local function CircularProgress(props)
 
 	return New("Frame")({
 		Name = "Progress",
-		--AnchorPoint = Vector2.new(0.5, 0.5),
 		AnchorPoint = props.anchorPoint,
 		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
 		BackgroundTransparency = 1,
 		BorderColor3 = Color3.fromRGB(0, 0, 0),
 		BorderSizePixel = 0,
-		-- Position = UDim2.fromScale(0.5, 0.5),
-		-- Size = UDim2.fromScale(2.55, 2.55),
 		Position = props.position,
 		Size = props.size,
 		SizeConstraint = Enum.SizeConstraint.RelativeYY,
