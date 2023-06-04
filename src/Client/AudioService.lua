@@ -1,11 +1,13 @@
 local ContentProvider = game:GetService("ContentProvider")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local StarterPlayer = game:GetService("StarterPlayer")
 
 local AudioService = {}
 
 local Promise = require(ReplicatedStorage.Styngr.Packages.promise)
 local State = require(ReplicatedStorage.Styngr.State)
-local Line = require(script.Parent.Components.Line)
+local ProgressState = require(StarterPlayer.StarterPlayerScripts.Styngr.ProgressState)
 
 local SongEvents = ReplicatedStorage.Styngr.SongEvents
 
@@ -84,6 +86,10 @@ function AudioService:PlaySound(track)
 		self._audio.Played:Connect(function()
 			SongEvents:FireServer("PLAYED")
 		end)
+
+		RunService.RenderStepped:Connect(function()
+			ProgressState:set(math.floor(self._audio.TimePosition / self._audio.TimeLength * 1000) / 1000)
+		end)
 	end
 
 	if self._audio.IsPlaying then
@@ -108,7 +114,6 @@ function AudioService:PlaySound(track)
 		playlistId = track.playlistId,
 		artists = artists,
 		title = track.title,
-		timeLength = self._audio.TimeLength,
 	})
 end
 
