@@ -6,7 +6,7 @@
 			"$className": "ReplicatedStorage",
 			"Styngr": {
 				"$className": "Folder",
-				"$path": "src/Shared",
+				"$path": "src/ReplicatedStorage",
 				"Packages": {
 					"$className": "Folder",
 					"$path": "Packages"
@@ -40,7 +40,7 @@
 			"$className": "ServerScriptService",
 			"Styngr": {
 				"$className": "Folder",
-				"$path": "src/Server"
+				"$path": "src/ServerScriptService"
 			},
 			"Local": {
 				"$className": "Folder",
@@ -53,7 +53,7 @@
 				"$className": "StarterPlayerScripts",
 				"Styngr": {
 					"$className": "Folder",
-					"$path": "src/Client"
+					"$path": "src/StarterPlayer/StarterPlayerScripts"
 				},
 				"Local": {
 					"$className": "Folder",
