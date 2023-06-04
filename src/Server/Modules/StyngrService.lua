@@ -247,19 +247,23 @@ function StyngrService:GetPlaylists(player: Player)
 
 	local _ = self:CreateAndConfirmTransaction(player, "SUBSCRIPTION_RADIO_BUNDLE_FREE"):await()
 
-	return self:_getPlaylistsRaw(player):andThen(function(body)
-		return Promise.new(function(resolve)
-			local playlistsById = {}
+	return self:_getPlaylistsRaw(player)
+		:andThen(function(body)
+			return Promise.new(function(resolve)
+				local playlistsById = {}
 
-			for _, playlist in body["playlists"] do
-				playlistsById[playlist.id] = playlist
-			end
+				for _, playlist in body["playlists"] do
+					playlistsById[playlist.id] = playlist
+				end
 
-			self:_setPlayersPlaylists(player.UserId, playlistsById)
+				self:_setPlayersPlaylists(player.UserId, playlistsById)
 
-			resolve(body)
+				resolve(body)
+			end)
 		end)
-	end)
+		:catch(function(error)
+			warn(error)
+		end)
 end
 
 function StyngrService:StartPlaylistSession(player: Player, playlistId: string)
@@ -289,6 +293,9 @@ function StyngrService:StartPlaylistSession(player: Player, playlistId: string)
 
 				resolve(session)
 			end)
+		end)
+		:catch(function(error)
+			warn(error)
 		end)
 end
 

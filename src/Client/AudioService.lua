@@ -94,9 +94,11 @@ function AudioService:PlaySound(track)
 	if self._audio.IsLoaded then
 		self._audio:Play()
 	else
-		Promise.fromEvent(self._audio.Loaded):andThen(function()
-			self._audio:Play()
-		end)
+		Promise.fromEvent(self._audio.Loaded)
+			:andThen(function()
+				self._audio:Play()
+			end)
+			:await()
 	end
 
 	local artists = table.concat(track.artistNames, ", ")
