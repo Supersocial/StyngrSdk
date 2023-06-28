@@ -180,10 +180,26 @@ function StyngrService:SetConfiguration(inputConfiguration: Types.StyngrServiceC
 	self._tracking = {}
 	self._connections = {}
 	self._playlists = {}
+	self._boomboxModels = {}
 
 	local SongEventsConnection = ReplicatedStorage.Styngr.SongEvents.OnServerEvent:Connect(
 		function(player: Player, event)
 			self:_clientTrackEvent(player.UserId, event)
+
+			-- Get or create boombox model
+			local boomboxModel = self._boomboxModels[player] or self:_makeBoomboxModel()
+			self._boomboxModels[player] = boomboxModel
+
+			local character = player.Character
+			
+			if (event == "PLAYED" or event == "RESUMED") then
+				local gripAttachment = character:FindFirstChild("RightGripAttachment", true)
+				boomboxModel.CFrame = gripAttachment.WorldCFrame
+				boomboxModel.BallSocketConstraint.Attachment1 = gripAttachment
+				boomboxModel.Parent = character
+			else
+				boomboxModel.Parent = nil
+			end
 		end
 	)
 
@@ -482,6 +498,39 @@ function StyngrService:CreateAndConfirmTransaction(player: Player, bundleToPurch
 			return self:_confirmTransaction(player, transactionId)
 		end)
 	end)
+end
+
+--[[
+	Creates a boombox model. We do this manually and by hand instead of a 
+	RBXM packaged with the SDK because the mesh ID is hot-swappable, and can't
+	require a re-build of the RBXM.
+]]
+function StyngrService:_makeBoomboxModel()
+	local boombox = Instance.new("Part")
+	boombox.Name = "BoomboxModel"
+	boombox.Size = Vector3.new(2.2, 1.2, 0.5)
+	boombox.CanCollide = false
+	boombox.Massless = true
+
+	local attachment = Instance.new("Attachment")
+	attachment.Parent = boombox
+	attachment.CFrame = CFrame.new(0, boombox.Size.Y / 2, 0) * CFrame.Angles(0, math.rad(65), 0)
+	
+	local socket = Instance.new("BallSocketConstraint")
+	socket.LimitsEnabled = true
+	socket.UpperAngle = 20
+	socket.Restitution = 1
+	socket.Attachment0 = attachment
+	socket.Parent = boombox
+	socket.MaxFrictionTorque = 15
+
+	local mesh = Instance.new("SpecialMesh")
+	mesh.Parent = boombox
+	mesh.MeshId = "rbxassetid://13894568565"
+	mesh.TextureId = self._configuration.boombox.textureId
+	mesh.Scale = Vector3.new(0.05, 0.05, 0.05)
+
+	return boombox
 end
 
 return StyngrService
