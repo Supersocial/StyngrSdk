@@ -7,11 +7,13 @@ local HttpService = game:GetService("HttpService")
 local LocalizationService = game:GetService("LocalizationService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
+local Players = game:GetService("Players")
 
 local Promise = require(ReplicatedStorage.Styngr.Packages.promise)
 local CloudService = require(ServerScriptService.Styngr.Modules.CloudService)
 local Types = require(ServerScriptService.Styngr.Types)
 local ISODurations = require(ReplicatedStorage.Styngr.Utils.ISODurations)
+local BoomboxModel = require(ServerScriptService.Styngr.Modules.BoomboxModel)
 
 local StyngrService = {}
 
@@ -181,27 +183,34 @@ function StyngrService:SetConfiguration(inputConfiguration: Types.StyngrServiceC
 	self._connections = {}
 	self._playlists = {}
 	self._boomboxModels = {}
+	self._playersListening = {}
 
 	local SongEventsConnection = ReplicatedStorage.Styngr.SongEvents.OnServerEvent:Connect(
 		function(player: Player, event)
 			self:_clientTrackEvent(player.UserId, event)
 
 			-- Get or create boombox model
-			local boomboxModel = self._boomboxModels[player] or self:_makeBoomboxModel()
-			self._boomboxModels[player] = boomboxModel
+			local boomboxModel = self._boomboxModels[player]
 
-			local character = player.Character
-			
 			if (event == "PLAYED" or event == "RESUMED") then
-				local gripAttachment = character:FindFirstChild("RightGripAttachment", true)
-				boomboxModel.CFrame = gripAttachment.WorldCFrame
-				boomboxModel.BallSocketConstraint.Attachment1 = gripAttachment
-				boomboxModel.Parent = character
+				boomboxModel:Show()
+
+				self._playersListening[player] = true
 			else
-				boomboxModel.Parent = nil
+				boomboxModel:Hide()
+
+				self._playersListening[player] = false
 			end
 		end
 	)
+
+	-- Persistant boombox model
+	Players.PlayerAdded:Connect(function(player)
+		local model = BoomboxModel.new(self._configuration.boombox.textureId, player)
+		
+		self._boomboxModels[player] = model
+		self._playersListening[player] = false
+	end)
 
 	table.insert(self._connections, SongEventsConnection)
 
@@ -501,7 +510,7 @@ function StyngrService:CreateAndConfirmTransaction(player: Player, bundleToPurch
 end
 
 --[[
-	Creates a boombox model. We do this manually and by hand instead of a 
+	Creates a boombox model. We do this manually and by hand instead of a
 	RBXM packaged with the SDK because the mesh ID is hot-swappable, and can't
 	require a re-build of the RBXM.
 ]]
