@@ -42,9 +42,9 @@ local StyngrService = require("path.to.StyngrService")
 StyngrService:SetConfiguration({
     apiKey = "...",
     appId = "...",
-	boombox = {
-		textureId = "..."
-	}
+    boombox = {
+        textureId = "..."
+    }
 })
 ```
 
