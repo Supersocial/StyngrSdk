@@ -157,7 +157,11 @@ function StyngrService:SetConfiguration(inputConfiguration: Types.StyngrServiceC
 			and inputConfiguration.apiKey
 			and typeof(inputConfiguration.apiKey) == "string"
 			and inputConfiguration.appId
-			and typeof(inputConfiguration.appId) == "string",
+			and typeof(inputConfiguration.appId) == "string"
+			and inputConfiguration.boombox
+			and typeof(inputConfiguration.boombox == "table")
+			and inputConfiguration.boombox.textureId
+			and typeof(inputConfiguration.boombox.textureId) == "string",
 		"Please specify a configuration and ensure all values are correct!"
 	)
 
@@ -189,28 +193,34 @@ function StyngrService:SetConfiguration(inputConfiguration: Types.StyngrServiceC
 		function(player: Player, event)
 			self:_clientTrackEvent(player.UserId, event)
 
-			-- Get or create boombox model
-			local boomboxModel = self._boomboxModels[player]
-
 			if (event == "PLAYED" or event == "RESUMED") then
-				boomboxModel:Show()
-
 				self._playersListening[player] = true
 			else
-				boomboxModel:Hide()
-
 				self._playersListening[player] = false
+			end
+
+			-- Hide or show boombox model if not disabled in configuration
+			if (self._configuration.boombox.disabled == nil) then
+				-- Get or create boombox model
+				local boomboxModel = self._boomboxModels[player]
+				if (event == "PLAYED" or event == "RESUMED") then
+					boomboxModel:Show()
+				else
+					boomboxModel:Hide()
+				end
 			end
 		end
 	)
 
-	-- Persistant boombox model
-	Players.PlayerAdded:Connect(function(player)
-		local model = BoomboxModel.new(self._configuration.boombox.textureId, player)
-		
-		self._boomboxModels[player] = model
-		self._playersListening[player] = false
-	end)
+	if (self._configuration.boombox.disabled == nil) then
+		-- Persistant boombox model
+		Players.PlayerAdded:Connect(function(player)
+			local model = BoomboxModel.new(self._configuration.boombox.textureId, player)
+			
+			self._boomboxModels[player] = model
+			self._playersListening[player] = false
+		end)
+	end
 
 	table.insert(self._connections, SongEventsConnection)
 
