@@ -42,8 +42,13 @@ local StyngrService = require("path.to.StyngrService")
 StyngrService:SetConfiguration({
     apiKey = "...",
     appId = "...",
+	boombox = {
+		textureId = "..."
+	}
 })
 ```
+
+You'll need to provide a `textureId` for the boombox. This is the "skin" that's applied to the physical boombox that's shown when a Player is listening to music.
 
 **This code should be run somewhere before the** `StyngrSdk` **is interacted with**
 
