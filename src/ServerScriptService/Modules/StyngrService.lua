@@ -13,6 +13,7 @@ local Promise = require(ReplicatedStorage.Styngr.Packages.promise)
 local CloudService = require(ServerScriptService.Styngr.Modules.CloudService)
 local Types = require(ServerScriptService.Styngr.Types)
 local ISODurations = require(ReplicatedStorage.Styngr.Utils.ISODurations)
+local DateTimeOffset = require(ReplicatedStorage.Styngr.Utils.DateTimeOffset)
 local BoomboxModel = require(ServerScriptService.Styngr.Modules.BoomboxModel)
 
 local StyngrService = {}
@@ -350,6 +351,7 @@ function StyngrService:RequestNextTrack(player: Player)
 
 	local statistics = self:_endTrack(player.UserId)
 	local duration = ISODurations.TranslateSecondsToDuration(statistics.duration)
+	local utcOffset = DateTimeOffset.GetCurrentUtcOffset()
 
 	return self._cloudService
 		:GetToken(player)
@@ -364,11 +366,15 @@ function StyngrService:RequestNextTrack(player: Player)
 					statistics = {
 						{
 							trackId = session.track.trackId,
+							playlistId = session.playlistId,
 							start = DateTime.fromUnixTimestamp(statistics.started):ToIsoDate(),
 							duration = duration,
+							useType = 'streaming',
 							autoplay = true,
 							isMuted = false,
-							clientTimestampOffset = "",
+							endStreamReason = 'completed',
+							clientTimestampOffset = utcOffset,
+							playlistSessionId = session.sessionId,
 						},
 					},
 				}
@@ -407,6 +413,7 @@ function StyngrService:SkipTrack(player: Player)
 
 	local statistics = self:_endTrack(player.UserId)
 	local duration = ISODurations.TranslateSecondsToDuration(statistics.duration)
+	local utcOffset = DateTimeOffset.GetCurrentUtcOffset()
 
 	return self._cloudService
 		:GetToken(player)
@@ -421,11 +428,15 @@ function StyngrService:SkipTrack(player: Player)
 					statistics = {
 						{
 							trackId = session.track.trackId,
+							playlistId = session.playlistId,
 							start = DateTime.fromUnixTimestamp(statistics.started):ToIsoDate(),
 							duration = duration,
+							useType = 'streaming',
 							autoplay = true,
 							isMuted = false,
-							clientTimestampOffset = "",
+							endStreamReason = 'skip',
+							clientTimestampOffset = utcOffset,
+							playlistSessionId = session.sessionId,
 						},
 					},
 				}
